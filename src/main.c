@@ -1,3 +1,5 @@
+#include <time.h>
+#include <unistd.h>
 #include <GLES2/gl2.h>
 
 #include "screen.h"
@@ -24,36 +26,40 @@ int main()
          0.0f,  1.0f, 0.0f,
     };
 
-    // clear the colour buffer
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // use the shader pgoram
-    glUseProgram(program);
-
     // load the vertex buffer data
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, vertex_buffer_data);
 
     // enable the vertex buffer data
     glEnableVertexAttribArray(0);
 
-    // draw the vertex buffer data as triangles
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    // render and swap the framebuffer
-    void *buffer = malloc(SCREEN_WIDTH * SCREEN_HEIGHT * 4);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glReadPixels(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-
-    // free the framebuffer now that its drawn
-    free(buffer);
-
-    // update the screen
-    update_screen(screen);
-
-    // rendering kept out of while until the frame limiter is implemented
-    // crashes the whole pi if rendering without one
     while (1)
     {
+        // store the time at the start of the frame to calculate the duration of the frame
+        clock_t start_time = clock();
+
+        // clear the colour buffer
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // draw the vertex buffer data as triangles
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        // render and swap the framebuffer
+        void *buffer = malloc(SCREEN_WIDTH * SCREEN_HEIGHT * 4);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glReadPixels(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+
+        // free the framebuffer now that its drawn
+        free(buffer);
+
+        // update the screen
+        update_screen(screen);
+
+        // calculte the length of the frame in milliseconds
+        double frame_time = (clock() - start_time) / (CLOCKS_PER_SEC / 1000.0);
+
+        // sleep for the remainder of the frame if it finished before the framerate limit
+        if (frame_time < (1000.0 / SCREEN_RATE))
+            usleep((1000.0 / SCREEN_RATE) - frame_time);
     }
 
     // free the screen from memory

@@ -2,9 +2,11 @@
 
 #include <EGL/egl.h>
 
+// following standards from sdvx
 #define SCREEN_NUMBER 0
 #define SCREEN_WIDTH 720
 #define SCREEN_HEIGHT 1280
+#define SCREEN_RATE 60
 
 typedef struct
 {
