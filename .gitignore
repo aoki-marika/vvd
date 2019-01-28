@@ -1,3 +1,6 @@
+# Bin directory
+bin/
+
 # Nano swp files
 *.swp
 
