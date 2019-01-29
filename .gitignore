@@ -1,5 +1,5 @@
-# Bin directory
-bin/
+# Binary output
+bin/vvd
 
 # Nano swp files
 *.swp
