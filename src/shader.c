@@ -19,7 +19,7 @@ void print_shader_log(GLuint shader)
 
     // only print the log if there is any content
     if (length > 0)
-        printf("%s", log);
+        printf("%s\n", log);
 }
 
 void assert_shader_error(GLuint shader, GLenum pname)
@@ -56,7 +56,7 @@ void create_shader(GLuint *shader, GLenum type, const char *source_path)
     length = ftell(source_file);
 
     // init the buffer
-    buffer = malloc(sizeof(char) * length);
+    buffer = malloc(sizeof(char) * (length + 1));
 
     // read the file into the buffer
     fseek(source_file, 0, SEEK_SET);
@@ -64,6 +64,9 @@ void create_shader(GLuint *shader, GLenum type, const char *source_path)
 
     // close the source file
     fclose(source_file);
+
+    // terminate the buffer
+    buffer[length] = '\0';
 
     // set the shader source and compile
     const GLchar *source = (GLchar *)buffer;

@@ -19,7 +19,7 @@ void print_program_log(GLuint program)
 
     // only print the log if there is any content
     if (length > 0)
-        printf("%s", log);
+        printf("%s\n", log);
 }
 
 void assert_program_error(GLuint program, GLenum pname)
