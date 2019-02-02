@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-void print_program_log(GLuint program)
+void program_print_log(GLuint program)
 {
     // make sure program is actually a program
     assert(glIsProgram(program));
@@ -22,7 +22,7 @@ void print_program_log(GLuint program)
         printf("%s\n", log);
 }
 
-void assert_program_error(GLuint program, GLenum pname)
+void program_assert_error(GLuint program, GLenum pname)
 {
     // check the program iv
     GLint check = GL_FALSE;
@@ -30,13 +30,13 @@ void assert_program_error(GLuint program, GLenum pname)
 
     // if the check is going to fail then print the log first
     if (check != GL_TRUE)
-        print_program_log(program);
+        program_print_log(program);
 
     // make sure the check was successful
     assert(check == GL_TRUE);
 }
 
-void create_program(GLuint *program, GLuint vertex_shader, GLuint fragment_shader)
+void program_create(GLuint *program, GLuint vertex_shader, GLuint fragment_shader)
 {
     // create the program
     *program = glCreateProgram();
@@ -49,7 +49,7 @@ void create_program(GLuint *program, GLuint vertex_shader, GLuint fragment_shade
     glLinkProgram(*program);
 
     // make sure there are no link errors
-    assert_program_error(*program, GL_LINK_STATUS);
+    program_assert_error(*program, GL_LINK_STATUS);
 
     // use the program
     glUseProgram(*program);

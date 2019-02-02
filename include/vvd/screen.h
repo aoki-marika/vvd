@@ -15,5 +15,11 @@ typedef struct
     EGLContext context;
 } Screen;
 
-Screen *create_screen();
-void update_screen(Screen *screen);
+// get a reference to the current display screen and create an egl context
+Screen *screen_get();
+
+// frees the given screen from memory
+void screen_free(Screen *screen);
+
+// updates the given screens egl context
+void screen_update(Screen *screen);

@@ -2,4 +2,5 @@
 
 #include <GLES2/gl2.h>
 
-void create_shader(GLuint *shader, GLenum type, const char *source_path);
+// creates a shader of the given type with source from the given source path and sets shader to its id
+void shader_create(GLuint *shader, GLenum type, const char *source_path);

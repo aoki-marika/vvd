@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-void print_shader_log(GLuint shader)
+void shader_print_log(GLuint shader)
 {
     // make sure shader is actually a shader
     assert(glIsShader(shader));
@@ -22,7 +22,7 @@ void print_shader_log(GLuint shader)
         printf("%s\n", log);
 }
 
-void assert_shader_error(GLuint shader, GLenum pname)
+void shader_assert_error(GLuint shader, GLenum pname)
 {
     // check the shader iv
     GLint check = GL_FALSE;
@@ -30,13 +30,13 @@ void assert_shader_error(GLuint shader, GLenum pname)
 
     // if the check is going to fail then print the log first
     if (check != GL_TRUE)
-        print_shader_log(shader);
+        shader_print_log(shader);
 
     // make sure the check was successful
     assert(check == GL_TRUE);
 }
 
-void create_shader(GLuint *shader, GLenum type, const char *source_path)
+void shader_create(GLuint *shader, GLenum type, const char *source_path)
 {
     // create the shader
     *shader = glCreateShader(type);
@@ -77,5 +77,5 @@ void create_shader(GLuint *shader, GLenum type, const char *source_path)
     free(buffer);
 
     // make sure there are no compilation errors
-    assert_shader_error(*shader, GL_COMPILE_STATUS);
+    shader_assert_error(*shader, GL_COMPILE_STATUS);
 }

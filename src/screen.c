@@ -4,12 +4,12 @@
 #include <bcm_host.h>
 #include <GLES2/gl2.h>
 
-void assert_gl()
+void gl_assert()
 {
     assert(glGetError() == 0);
 }
 
-Screen *create_screen()
+Screen *screen_get()
 {
     // init bcm for getting a frambuffer output
     bcm_host_init();
@@ -51,28 +51,28 @@ Screen *create_screen()
     // get an egl display connection
     screen->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert(screen->display != EGL_NO_DISPLAY);
-    assert_gl();
+    gl_assert();
 
     // initialize the egl display connection
     result = eglInitialize(screen->display, NULL, NULL);
     assert(result != EGL_FALSE);
-    assert_gl();
+    gl_assert();
 
     // get an appropriate egl framebuffer configuration
     EGLint num_config;
     result = eglChooseConfig(screen->display, attributes, &config, 1, &num_config);
     assert(result != EGL_FALSE);
-    assert_gl();
+    gl_assert();
 
     // get an approiate egl api
     result = eglBindAPI(EGL_OPENGL_ES_API);
     assert(result != EGL_FALSE);
-    assert_gl();
+    gl_assert();
 
     // create an egl rendering context
     screen->context = eglCreateContext(screen->display, config, EGL_NO_CONTEXT, context_attributes);
     assert(screen->context != EGL_NO_CONTEXT);
-    assert_gl();
+    gl_assert();
 
     // create an egl window surface
     // set display_rect to the resolution of the screen
@@ -112,18 +112,23 @@ Screen *create_screen()
     // create the egl surface
     screen->surface = eglCreateWindowSurface(screen->display, config, &window, NULL);
     assert(screen->surface != EGL_NO_SURFACE);
-    assert_gl();
+    gl_assert();
 
     // connect the context to the surface
     result = eglMakeCurrent(screen->display, screen->surface, screen->surface, screen->context);
     assert(result != EGL_FALSE);
-    assert_gl();
+    gl_assert();
 
     // return the screen
     return screen;
 }
 
-void update_screen(Screen *screen)
+void screen_free(Screen *screen)
+{
+    free(screen);
+}
+
+void screen_update(Screen *screen)
 {
     // swap the screen buffers
     eglSwapBuffers(screen->display, screen->surface);

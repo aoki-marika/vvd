@@ -2,4 +2,5 @@
 
 #include <GLES2/gl2.h>
 
-void create_program(GLuint *program, GLuint vertex_shader, GLuint fragment_shader);
+// create a shader program with the given vertex and fragment shaders and set program to its id
+void program_create(GLuint *program, GLuint vertex_shader, GLuint fragment_shader);

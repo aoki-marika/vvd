@@ -12,7 +12,7 @@
 int main()
 {
     // create the screen
-    Screen *screen = create_screen(screen);
+    Screen *screen = screen_get();
 
     // setup gles
     glEnable(GL_DEPTH_TEST);
@@ -21,9 +21,9 @@ int main()
     // create the shaders and program
     GLuint vertex, fragment, program;
 
-    create_shader(&vertex, GL_VERTEX_SHADER, "/home/pi/projects/vvd/bin/cube.vs");
-    create_shader(&fragment, GL_FRAGMENT_SHADER, "/home/pi/projects/vvd/bin/cube.fs");
-    create_program(&program, vertex, fragment);
+    shader_create(&vertex, GL_VERTEX_SHADER, "/home/pi/projects/vvd/bin/cube.vs");
+    shader_create(&fragment, GL_FRAGMENT_SHADER, "/home/pi/projects/vvd/bin/cube.fs");
+    program_create(&program, vertex, fragment);
 
     // get uniform and attribute locations
     GLuint mvp_uniform = glGetUniformLocation(program, "mvp");
@@ -171,10 +171,11 @@ int main()
         glDisableVertexAttribArray(vertex_position_attribute);
 
         // update the screen
-        update_screen(screen);
+        screen_update(screen);
 
         // calculte the length of the frame in milliseconds
-        double frame_time = (clock() - start_time) / (CLOCKS_PER_SEC / 1000.0);
+        frame_end = clock();
+        double frame_time = (((double) (frame_end - frame_start)) / CLOCKS_PER_SEC) * 1000.0;
 
         // sleep for the remainder of the frame if it finished before the framerate limit
         if (frame_time < (1000.0 / SCREEN_RATE))
@@ -188,7 +189,7 @@ int main()
     glDeleteShader(fragment);
     glDeleteProgram(program);
 
-    free(screen);
+    screen_free(screen);
 
     return 0;
 }
