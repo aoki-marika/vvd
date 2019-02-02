@@ -65,6 +65,14 @@ void hid_device_set_devnode_path(HIDDevice *device)
     udev_enumerate_scan_devices(enumerate);
     struct udev_list_entry *devices = udev_enumerate_get_list_entry(enumerate);
 
+    // get the string representations of devices vendor_id and product_id
+    // need them as strings to compare against udev device vids and pids
+    char *device_vendor_id = malloc(4 * sizeof(char));
+    char *device_product_id = malloc(4 * sizeof(char));
+
+    snprintf(device_vendor_id, 5, "%04x", device->vendor_id);
+    snprintf(device_product_id, 5, "%04x", device->product_id);
+
     // iterate all the device in the device list
     struct udev_list_entry *device_list_entry;
     udev_list_entry_foreach(device_list_entry, devices)
@@ -81,8 +89,8 @@ void hid_device_set_devnode_path(HIDDevice *device)
         assert(usb_device);
 
         // if the usb device matches the given devices vid and pid
-        if (strcmp(udev_device_get_sysattr_value(usb_device, "idVendor"), device->vendor_id) == 0 &&
-            strcmp(udev_device_get_sysattr_value(usb_device, "idProduct"), device->product_id) == 0)
+        if (strcmp(udev_device_get_sysattr_value(usb_device, "idVendor"), device_vendor_id) == 0 &&
+            strcmp(udev_device_get_sysattr_value(usb_device, "idProduct"), device_product_id) == 0)
         {
             // get the hidraw devices devnode and copy it into device->devnode_path
             const char *devnode = udev_device_get_devnode(hidraw_device);
@@ -106,6 +114,8 @@ void hid_device_set_devnode_path(HIDDevice *device)
     // release all the udev references
     udev_enumerate_unref(enumerate);
     udev_unref(udev);
+    free(device_vendor_id);
+    free(device_product_id);
 
     // assert that the devnode was found
     assert(devnode_found);
@@ -265,7 +275,7 @@ void hid_device_set_io(HIDDevice *device)
 }
 
 // Get the first HIDDevice matching the given Vendor ID and Product ID.
-HIDDevice *hid_device_get(const char *vendor_id, const char *product_id)
+HIDDevice *hid_device_get(uint16_t vendor_id, uint16_t product_id)
 {
     // create the device
     HIDDevice *device = malloc(sizeof(HIDDevice));

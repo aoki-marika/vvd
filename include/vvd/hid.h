@@ -33,7 +33,8 @@ typedef struct
     char *devnode_path;
     int fd;
     bool fd_open;
-    const char *vendor_id, *product_id;
+
+    uint16_t vendor_id, product_id;
 
     int num_axes, num_buttons, num_lights;
     HIDIO *axes, *buttons, *lights;
@@ -42,7 +43,7 @@ typedef struct
     HIDRequestGroup *request_groups;
 } HIDDevice;
 
-HIDDevice *hid_device_get(const char *vendor_id, const char *product_id);
+HIDDevice *hid_device_get(uint16_t vendor_id, uint16_t product_id);
 void hid_device_free(HIDDevice *device);
 
 void hid_device_get_axis(HIDDevice *device, int index, float *value);
