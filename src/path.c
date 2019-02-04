@@ -4,7 +4,7 @@
 #include <libgen.h>
 #include <string.h>
 
-void get_relative_path(const char *path, char output_path[PATH_MAX])
+void path_get_relative(const char *path, char output_path[PATH_MAX])
 {
     // get the executable path
     char executable_path[PATH_MAX];
