@@ -45,7 +45,7 @@ void assert_result(int result, const char *perror_message)
     if (result < 0)
     {
         perror(perror_message);
-        exit(result);
+        exit(1);
     }
 }
 
