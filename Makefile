@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -I/opt/vc/include -Iinclude -Iinclude/vvd
-LDFLAGS = -L/opt/vc/lib -lbrcmGLESv2 -lbrcmEGL -lbcm_host -lm -ludev
+LDFLAGS = -L/opt/vc/lib -lbrcmGLESv2 -lbrcmEGL -lbcm_host -lm -ludev -lportaudio -lsndfile
 MKDIR_P = mkdir -p
 RM = rm
 RM_R = $(RM) -r
