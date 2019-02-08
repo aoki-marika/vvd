@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "shader.h"
+
 void program_print_log(GLuint program)
 {
     // make sure program is actually a program
@@ -36,21 +38,52 @@ void program_assert_error(GLuint program, GLenum pname)
     assert(check == GL_TRUE);
 }
 
-void program_create(GLuint *program, GLuint vertex_shader, GLuint fragment_shader)
+Program *program_create(const char *vertex_source_path, const char *fragment_source_path)
 {
     // create the program
-    *program = glCreateProgram();
+    Program *program = malloc(sizeof(Program));
+    program->id = glCreateProgram();
+
+    // create the vertex and fragment shaders
+    shader_create(&program->vertex_id, GL_VERTEX_SHADER, vertex_source_path);
+    shader_create(&program->fragment_id, GL_FRAGMENT_SHADER, fragment_source_path);
 
     // attach the vertex and fragment shaders
-    glAttachShader(*program, vertex_shader);
-    glAttachShader(*program, fragment_shader);
+    glAttachShader(program->id, program->vertex_id);
+    glAttachShader(program->id, program->fragment_id);
 
     // link the program
-    glLinkProgram(*program);
+    glLinkProgram(program->id);
 
     // make sure there are no link errors
-    program_assert_error(*program, GL_LINK_STATUS);
+    program_assert_error(program->id, GL_LINK_STATUS);
 
     // use the program
-    glUseProgram(*program);
+    glUseProgram(program->id);
+
+    // return the program
+    return program;
+}
+
+void program_free(Program *program)
+{
+    glDeleteShader(program->vertex_id);
+    glDeleteShader(program->fragment_id);
+    glDeleteProgram(program->id);
+    free(program);
+}
+
+GLuint program_get_uniform_id(Program *program, const GLchar *name)
+{
+    return glGetUniformLocation(program->id, name);
+}
+
+GLuint program_get_attribute_id(Program *program, const GLchar *name)
+{
+    return glGetAttribLocation(program->id, name);
+}
+
+void program_use(Program *program)
+{
+    glUseProgram(program->id);
 }
