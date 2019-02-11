@@ -67,6 +67,9 @@ typedef struct
     // the difficulty rating of this chart (1-20)
     uint8_t rating;
 
+    // the offset (in ms) for the audio of this chart
+    double offset;
+
     // the different beats of this chart
     int num_beats;
     Beat *beats;

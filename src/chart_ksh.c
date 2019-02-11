@@ -101,7 +101,7 @@ void parse_kv_pair(Chart *chart,
     // parse out the key and value
     char *key = strtok(line, "=");
     char *value = strtok(NULL, "=");
-    char *value_not_null = value ? value : ""; //strcpy doesnt like nil values
+    char *value_not_null = value ? value : ""; //strcpy doesnt like null values
 
     // assign the value to the respective property on the given chart
 
@@ -120,12 +120,15 @@ void parse_kv_pair(Chart *chart,
     // rating
     else if (strcmp(key, "level") == 0)
         chart->rating = atoi(value);
-    // tempo
-    else if (strcmp(key, "t") == 0)
-        add_tempo(chart, value, measure, beat, subbeat);
+    // offset
+    else if (strcmp(key, "o") == 0)
+        chart->offset = atof(value);
     // beat
     else if (strcmp(key, "beat") == 0)
         add_beat(chart, value, measure, beat, subbeat);
+    // tempo
+    else if (strcmp(key, "t") == 0)
+        add_tempo(chart, value, measure, beat, subbeat);
     // print out unhandled k/v pairs for debugging
     else
         printf("parse_kv_pair: unhandled key/value pair '%s':'%s'\n", key, value);
