@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
+
+#include "path.h"
 
 void shader_print_log(GLuint shader)
 {
@@ -41,8 +44,17 @@ void shader_create(GLuint *shader, GLenum type, const char *source_path)
     // create the shader
     *shader = glCreateShader(type);
 
+    // get the source path relative to the binary directory
+    char relative_source_path[PATH_MAX];
+    strcpy(relative_source_path, "shaders/");
+    strcat(relative_source_path, source_path);
+
+    // get the full source path
+    char full_source_path[PATH_MAX];
+    path_get_relative(relative_source_path, full_source_path);
+
     // open the source file and ensure it exists
-    FILE *source_file = fopen(source_path, "r");
+    FILE *source_file = fopen(full_source_path, "r");
     assert(source_file);
 
     // the length of the file
