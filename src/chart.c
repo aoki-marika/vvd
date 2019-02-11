@@ -6,6 +6,7 @@
 #include <assert.h>
 
 #include "chart_ksh.h"
+#include "chart_vox.h"
 
 void chart_parse_file(Chart *chart,
                       const char *path,
@@ -57,7 +58,8 @@ Chart *chart_create(const char *path)
 {
     Chart *chart = malloc(sizeof(Chart));
 
-    // default the count properties to zero
+    // default the offset and count properties to zero
+    chart->offset = 0;
     chart->num_beats = 0;
     chart->num_tempos = 0;
 
@@ -99,6 +101,12 @@ Chart *chart_create(const char *path)
             parsing_state_create = chart_ksh_parsing_state_create;
             parsing_state_free = chart_ksh_parsing_state_free;
             parse_line = chart_ksh_parse_line;
+        }
+        else if (strcmp(path_extension, ".vox") == 0)
+        {
+            parsing_state_create = chart_vox_parsing_state_create;
+            parsing_state_free = chart_vox_parsing_state_free;
+            parse_line = chart_vox_parse_line;
         }
     }
 
