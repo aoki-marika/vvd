@@ -12,6 +12,15 @@
 #define CHART_BT_LANES 4
 #define CHART_FX_LANES 2
 
+// index of lane names per note type
+#define CHART_BT_LANE_A 0
+#define CHART_BT_LANE_B 1
+#define CHART_BT_LANE_C 2
+#define CHART_BT_LANE_D 3
+
+#define CHART_FX_LANE_L 0
+#define CHART_FX_LANE_R 1
+
 // max number of subbeats per beat
 // todo: not sure this is the proper term for this
 #define CHART_BEAT_MAX_SUBBEATS 48
