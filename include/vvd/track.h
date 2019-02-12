@@ -37,6 +37,10 @@ typedef struct
     // the lane (track background) program and mesh
     Program *lane_program;
     Mesh *lane_mesh;
+
+    // the beat bars program and mesh
+    Program *beat_bars_program;
+    Mesh *beat_bars_mesh;
 } Track;
 
 Track *track_create(Chart *chart);

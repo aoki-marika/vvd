@@ -26,7 +26,7 @@ double time_difference(Beat *beat,
 {
     // get the difference in beats
     int num_beats = 0;
-    num_beats += (lhs_measure - rhs_measure) * beat->nominator;
+    num_beats += (lhs_measure - rhs_measure) * beat->nominator; //todo: denominator?
     num_beats += lhs_beat - rhs_beat;
 
     // convert and return the difference in milliseconds
@@ -183,6 +183,10 @@ Track *track_create(Chart *chart)
     track->lane_mesh = mesh_create(MESH_VERTICES_QUAD, track->lane_program);
     mesh_set_vertices_quad(track->lane_mesh, 0, TRACK_WIDTH, TRACK_LENGTH);
 
+    // create the beat bars program and mesh
+    track->beat_bars_program = program_create("beat_bar.vs", "beat_bar.fs", true);
+    track->beat_bars_mesh = mesh_create(MESH_VERTICES_QUAD * 16 * 512, track->beat_bars_program); //todo: is this big enough?
+
     // return the track
     return track;
 }
@@ -191,9 +195,11 @@ void track_free(Track *track)
 {
     // free all the programs
     program_free(track->lane_program);
+    program_free(track->beat_bars_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
+    mesh_free(track->beat_bars_mesh);
 
     // free all the allocated properties
     free(track->beat_times);
@@ -283,4 +289,9 @@ void track_draw(Track *track, double time, double speed)
     program_use(track->lane_program);
     program_set_matrices(track->lane_program, projection, view, model);
     mesh_draw(track->lane_mesh);
+
+    // draw the beat bars
+    program_use(track->beat_bars_program);
+    program_set_matrices(track->beat_bars_program, projection, view, model);
+    mesh_draw(track->beat_bars_mesh);
 }
