@@ -20,6 +20,14 @@ typedef struct
     // the chart this track is displaying
     Chart *chart;
 
+    // the time, in ms, of each of charts beats
+    // this array is equal in length and represents values at the same index as chart->beats
+    double *beat_times;
+
+    // the time, in ms, of each of charts tempos
+    // this array is equal in length and represents values at the same index as chart->tempos
+    double *tempo_times;
+
     // the lane (track background) program and mesh
     Program *lane_program;
     Mesh *lane_mesh;
@@ -28,5 +36,5 @@ typedef struct
 Track *track_create(Chart *chart);
 void track_free(Track *track);
 
-// draw the given tracks state at the given time (ms from the beginning of the track)
-void track_draw(Track *track, double time);
+// draw the given tracks state at the given time (ms from the beginning of the track) and hi-speed
+void track_draw(Track *track, double time, double speed);
