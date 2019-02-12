@@ -28,6 +28,12 @@ typedef struct
     // this array is equal in length and represents values at the same index as chart->tempos
     double *tempo_times;
 
+    // the index of the current beat this track is on
+    int current_beat_index;
+
+    // the index of the current tempo this track is on
+    int current_tempo_index;
+
     // the lane (track background) program and mesh
     Program *lane_program;
     Mesh *lane_mesh;

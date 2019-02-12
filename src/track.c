@@ -203,34 +203,57 @@ void track_free(Track *track)
     free(track);
 }
 
+bool update_current_event(Track *track,
+                          double time,
+                          int num_events,
+                          double *event_times,
+                          int *current_event_index)
+{
+    // get the index of the event for the given time
+    int index = 0;
+
+    // for each event
+    for (int i = 0; i < num_events; i++)
+    {
+        // break if the current event is after the given time
+        if (event_times[i] > time)
+            break;
+
+        // set index as i is now validated
+        index = i;
+    }
+
+    // store whether or not the event index changed
+    bool changed = index != *current_event_index;
+
+    // set the current event index
+    *current_event_index = index;
+
+    // return whether or not the event index changed
+    return changed;
+}
+
 void track_draw(Track *track, double time, double speed)
 {
-    // get the tempo and its time in ms for the given time
-    Tempo *tempo;
-    double tempo_time;
+    // update the current beat and tempo
+    bool beat_changed = update_current_event(track,
+                                             time,
+                                             track->chart->num_beats,
+                                             track->beat_times,
+                                             &track->current_beat_index);
 
-    for (int i = 0; i < track->chart->num_tempos; i++)
-    {
-        // break if the current tempo is after the given time
-        if (track->tempo_times[i] > time)
-            break;
+    bool tempo_changed = update_current_event(track,
+                                              time,
+                                              track->chart->num_tempos,
+                                              track->tempo_times,
+                                              &track->current_tempo_index);
 
-        // set tempo and tempo_time as theyre now validated
-        tempo = &track->chart->tempos[i];
-        tempo_time = track->tempo_times[i];
-    }
+    // get the current beat and tempo
+    Beat *beat = &track->chart->beats[track->current_beat_index];
+    Tempo *tempo = &track->chart->tempos[track->current_tempo_index];
 
-    // get the beat for the given time
-    Beat *beat;
-
-    for (int i = 0; i < track->chart->num_beats; i++)
-    {
-        if (track->beat_times[i] > time)
-            break;
-
-        // set beat as its now validated
-        beat = &track->chart->beats[i];
-    }
+    // get the current tempos time
+    double tempo_time = track->tempo_times[track->current_tempo_index];
 
     // get the measure of time by adding an offset from tempos time
     // this allows this calculation to ignore previous beats/tempos
