@@ -51,10 +51,10 @@ void add_beat(Chart *chart,
               uint8_t subbeat)
 {
     // create the beat
-    // beats are 'nominator/denominator'
+    // beats are 'numerator/denominator'
     Beat chart_beat = (Beat)
     {
-        .nominator = atoi(strtok(value, "/")),
+        .numerator = atoi(strtok(value, "/")),
         .denominator = atoi(strtok(NULL, "/")),
         .measure = measure,
         .beat = beat,
@@ -232,11 +232,11 @@ void parse_measure(Chart *chart,
 
             // get references to commonly used values
             Beat *beat = &chart->beats[chart->num_beats - 1];
-            float nominator = beat->nominator;
+            float numerator = beat->numerator;
             float denominator = beat->denominator;
 
             // calculate the beat and subbeat
-            float subbeat_per_measure = CHART_BEAT_MAX_SUBBEATS * 4 / denominator * nominator;
+            float subbeat_per_measure = CHART_BEAT_MAX_SUBBEATS * 4 / denominator * numerator;
             float subbeat_per_line = subbeat_per_measure / (float)state->num_measure_notes;
             float current_line_subbeat = subbeat_per_line * (float)n;
             last_beat = floor(current_line_subbeat / (CHART_BEAT_MAX_SUBBEATS * 4 / denominator));

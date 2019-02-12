@@ -143,7 +143,7 @@ void parse_note(Chart *chart,
     if (length > 0)
     {
         // get the current number of beats per measure
-        uint8_t num_measure_beats = chart->beats[chart->num_beats - 1].nominator;
+        uint8_t num_measure_beats = chart->beats[chart->num_beats - 1].numerator;
 
         // calculate length in measures, beats, and subbeats
         uint8_t length_beats = length / CHART_BEAT_MAX_SUBBEATS;
@@ -191,13 +191,13 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
         {
             case VoxSectionBeatInfo:
             {
-                // timing, nominator, denominator
+                // timing, numerator, denominator
                 assert(num_values == 3);
 
                 // create the beat
                 Beat chart_beat = (Beat)
                 {
-                    .nominator = atoi(values[1]),
+                    .numerator = atoi(values[1]),
                     .denominator = atoi(values[2]),
                     .measure = measure,
                     .beat = beat,

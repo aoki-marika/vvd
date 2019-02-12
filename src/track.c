@@ -26,7 +26,7 @@ double time_difference(Beat *beat,
 {
     // get the difference in beats
     int num_beats = 0;
-    num_beats += (lhs_measure - rhs_measure) * beat->nominator; //todo: denominator?
+    num_beats += (lhs_measure - rhs_measure) * beat->numerator; //todo: denominator?
     num_beats += lhs_beat - rhs_beat;
 
     // convert and return the difference in milliseconds

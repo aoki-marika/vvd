@@ -28,7 +28,7 @@
 typedef struct
 {
     // the top and bottom values of the time signature for this beat
-    uint8_t nominator;
+    uint8_t numerator;
     uint8_t denominator;
 
     // the measure, beat, and subbeat that this beat starts at
