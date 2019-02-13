@@ -77,6 +77,9 @@ void parse_section(VoxParsingState *state, char *name)
     // format version
     if (strcmp(name, "FORMAT VERSION") == 0)
         state->section = VoxSectionFormatVersion;
+    // end position
+    else if (strcmp(name, "END POSITION") == 0)
+        state->section = VoxSectionEndPosition;
     // beat info
     else if (strcmp(name, "BEAT INFO") == 0)
         state->section = VoxSectionBeatInfo;
@@ -189,6 +192,18 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
 
         switch (state->section)
         {
+            case VoxSectionEndPosition:
+            {
+                // timing
+                assert(num_values == 1);
+
+                // set the charts end timing
+                chart->end_measure = measure;
+                chart->end_beat = beat;
+                chart->end_subbeat = subbeat;
+
+                break;
+            }
             case VoxSectionBeatInfo:
             {
                 // timing, numerator, denominator

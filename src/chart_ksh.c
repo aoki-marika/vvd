@@ -134,7 +134,8 @@ void parse_kv_pair(Chart *chart,
         printf("parse_kv_pair: unhandled key/value pair '%s':'%s'\n", key, value);
 }
 
-void parse_notes(int num_lanes, // the number of lanes for the note type to parse
+void parse_notes(KSHParsingState *state,
+                 int num_lanes, // the number of lanes for the note type to parse
                  char *values, //the note values from the note line for this type, e.g. the '0000' of '0000|00|00' for bt notes
                  Note *processing_holds[num_lanes], //the currently processing hold notes for the note type to parse
                  int num_notes[num_lanes], //the number of items in each lane of notes, incremented when new notes are added
@@ -173,6 +174,9 @@ void parse_notes(int num_lanes, // the number of lanes for the note type to pars
             notes[i][num_notes[i]] = note;
             num_notes[i]++;
 
+            // set last note
+            state->last_note = &notes[i][num_notes[i] - 1];
+
             // store a pointer in processing_holds to note if this is a hold note
             if (hold)
                 processing_holds[i] = &notes[i][num_notes[i] - 1];
@@ -189,6 +193,9 @@ void parse_notes(int num_lanes, // the number of lanes for the note type to pars
             hold->end_measure = measure;
             hold->end_beat = beat;
             hold->end_subbeat = subbeat;
+
+            // set last note
+            state->last_note = hold;
 
             // drop it from processing_holds
             processing_holds[i] = NULL;
@@ -243,7 +250,8 @@ void parse_measure(Chart *chart,
             last_subbeat = fmod(current_line_subbeat, CHART_BEAT_MAX_SUBBEATS * 4 / denominator);
 
             // parse the notes of the current line
-            parse_notes(CHART_BT_LANES,
+            parse_notes(state,
+                        CHART_BT_LANES,
                         bt,
                         state->processing_bt_holds,
                         chart->num_bt_notes,
@@ -252,7 +260,8 @@ void parse_measure(Chart *chart,
                         last_beat,
                         last_subbeat);
 
-            parse_notes(CHART_FX_LANES,
+            parse_notes(state,
+                        CHART_FX_LANES,
                         fx,
                         state->processing_fx_holds,
                         chart->num_fx_notes,
@@ -260,6 +269,23 @@ void parse_measure(Chart *chart,
                         state->measure,
                         last_beat,
                         last_subbeat);
+
+            // update the end time of the chart
+            if (state->last_note)
+            {
+                if (state->last_note->hold)
+                {
+                    chart->end_measure = state->last_note->end_measure;
+                    chart->end_beat = state->last_note->end_beat;
+                    chart->end_subbeat = state->last_note->end_subbeat;
+                }
+                else
+                {
+                    chart->end_measure = state->last_note->start_measure;
+                    chart->end_beat = state->last_note->start_beat;
+                    chart->end_subbeat = state->last_note->start_subbeat;
+                }
+            }
 
             // increment the current note index
             n++;

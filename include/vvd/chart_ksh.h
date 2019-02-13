@@ -28,7 +28,10 @@ typedef struct
 
     // the currently processing fx holds
     Note *processing_fx_holds[CHART_FX_LANES];
-} KSHParsingState;
+
+    // thek last note that was added
+    Note *last_note;
+} KSHParsingState; //todo: KSH -> Ksh
 
 void *chart_ksh_parsing_state_create();
 void chart_ksh_parsing_state_free(void *parsing_state);

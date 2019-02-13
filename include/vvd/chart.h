@@ -94,6 +94,11 @@ typedef struct
     // the fx notes of this chart
     int num_fx_notes[CHART_FX_LANES];
     Note *fx_notes[CHART_FX_LANES];
+
+    // the end measure, beat, and subbeat this chart ends at
+    uint16_t end_measure;
+    uint8_t end_beat;
+    uint8_t end_subbeat;
 } Chart;
 
 Chart *chart_create(const char *path);
