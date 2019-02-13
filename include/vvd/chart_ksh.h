@@ -31,7 +31,7 @@ typedef struct
 
     // thek last note that was added
     Note *last_note;
-} KSHParsingState; //todo: KSH -> Ksh
+} KshParsingState;
 
 void *chart_ksh_parsing_state_create();
 void chart_ksh_parsing_state_free(void *parsing_state);

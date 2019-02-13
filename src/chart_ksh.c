@@ -8,7 +8,7 @@
 
 void *chart_ksh_parsing_state_create()
 {
-    KSHParsingState *state = malloc(sizeof(KSHParsingState));
+    KshParsingState *state = malloc(sizeof(KshParsingState));
 
     // init default values
     state->metadata = true;
@@ -26,7 +26,7 @@ void *chart_ksh_parsing_state_create()
 
 void chart_ksh_parsing_state_free(void *parsing_state)
 {
-    KSHParsingState *state = (KSHParsingState *)parsing_state;
+    KshParsingState *state = (KshParsingState *)parsing_state;
 
     // free measure lines
     for (int i = 0; i < KSH_MEASURE_LINES_MAX; i++)
@@ -134,7 +134,7 @@ void parse_kv_pair(Chart *chart,
         printf("parse_kv_pair: unhandled key/value pair '%s':'%s'\n", key, value);
 }
 
-void parse_notes(KSHParsingState *state,
+void parse_notes(KshParsingState *state,
                  int num_lanes, // the number of lanes for the note type to parse
                  char *values, //the note values from the note line for this type, e.g. the '0000' of '0000|00|00' for bt notes
                  Note *processing_holds[num_lanes], //the currently processing hold notes for the note type to parse
@@ -204,7 +204,7 @@ void parse_notes(KSHParsingState *state,
 }
 
 void parse_measure(Chart *chart,
-                   KSHParsingState *state)
+                   KshParsingState *state)
 {
     // the last beat and subbeat that was parsed
     uint8_t last_beat = 0;
@@ -295,7 +295,7 @@ void parse_measure(Chart *chart,
 
 void chart_ksh_parse_line(Chart *chart, void *parsing_state, char *line)
 {
-    KSHParsingState *state = (KSHParsingState *)parsing_state;
+    KshParsingState *state = (KshParsingState *)parsing_state;
 
     // if parsing metadata and the current line is a k/v pair
     if (state->metadata && line_is_kv_pair(line))
