@@ -12,8 +12,7 @@
 // could maybe get time measure by caching the length of the chart (combine all bpm durations?)
 // then divide that by time to get % and do something to convert that to measure using measure size
 
-// todo: get_position -> height_by_subbeat
-float get_position(int subbeat, double speed)
+float position_by_subbeat(int subbeat, double speed)
 {
     return (float)subbeat / CHART_BEAT_MAX_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
 }
@@ -83,7 +82,7 @@ void load_notes_mesh(Mesh *mesh,
             // calculate the position of the note
             int lane = abs(l - (num_lanes - 1)); //lanes are rendered mirrored for some reason
             vec3_t position = vec3((lane * width) - (track_size.x / 2),
-                                   get_position(start_subbeat, speed),
+                                   position_by_subbeat(start_subbeat, speed),
                                    0);
 
             // calculate the size of the note
@@ -100,7 +99,7 @@ void load_notes_mesh(Mesh *mesh,
                                                                  note->end_subbeat);
 
                 // resize the note
-                size.y = get_position(length_subbeats, speed) - position.y;
+                size.y = position_by_subbeat(length_subbeats, speed) - position.y;
             }
 
             // add the note to the mesh
@@ -146,7 +145,7 @@ void reload_meshes(Track *track)
     for (int i = 0; i < total_beats; i++)
     {
         // calculate the position and size of the bar
-        vec3_t position = vec3(-track_size.x / 2, get_position(i * CHART_BEAT_MAX_SUBBEATS, track->speed), 0);
+        vec3_t position = vec3(-track_size.x / 2, position_by_subbeat(i * CHART_BEAT_MAX_SUBBEATS, track->speed), 0);
         vec3_t size = vec3(track_size.x, TRACK_BAR_HEIGHT, 0);
 
         // get the respective mesh and offset for the current bar
@@ -366,7 +365,7 @@ void track_draw(Track *track, double time, double speed)
 
     // get the current tempo position
     int start_subbeat = track->tempo_subbeats[track->tempo_index];
-    float start_position = get_position(start_subbeat, speed);
+    float start_position = position_by_subbeat(start_subbeat, speed);
 
     // get the next tempo position
     int end_subbeat;
@@ -375,7 +374,7 @@ void track_draw(Track *track, double time, double speed)
     else
         end_subbeat = track->end_subbeat;
 
-    float end_position_offset = get_position(end_subbeat - start_subbeat, speed);
+    float end_position_offset = position_by_subbeat(end_subbeat - start_subbeat, speed);
 
     // scroll the chart
     float scroll = -(start_position + (end_position_offset * percent));
