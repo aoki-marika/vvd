@@ -17,34 +17,43 @@ float position_by_subbeat(int subbeat, double speed)
     return (float)subbeat / CHART_BEAT_MAX_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
 }
 
-int get_total_subbeats_by_time(Chart *chart, uint16_t measure, uint8_t beat, uint8_t subbeat)
+int note_to_subbeat_end(uint16_t measure, uint8_t beat, uint8_t subbeat, Beat *current_beat)
+{
+    // return the amount of subbeats between the given beat and note
+    return ((measure - current_beat->measure) * current_beat->numerator + beat) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator) + subbeat;
+}
+
+int note_to_subbeat(Chart *chart, uint16_t measure, uint8_t beat, uint8_t subbeat)
 {
     int total_subbeats = 0;
-
-    if (measure == 0 && beat == 0 && subbeat == 0)
-        return 0;
 
     // for each beat
     for (int i = 0; i < chart->num_beats; i++)
     {
-        // get the current and next beat, if it exists
+        // get the current beat
         Beat *current_beat = &chart->beats[i];
 
+        // if this is the last beat
         if (i == chart->num_beats - 1)
         {
-            total_subbeats += ((measure - current_beat->measure) * current_beat->numerator + beat) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator) + subbeat;
+            total_subbeats += note_to_subbeat_end(measure, beat, subbeat, current_beat);
         }
+        // if this is not the last beat
         else
         {
+            // get the next beat
             Beat *next_beat = &chart->beats[i + 1];
 
+            // if the next beat applies to the given measure
             if (measure >= next_beat->measure)
             {
+                // append the amount of subbeats between the current and next beats to total_subbeats
                 total_subbeats += ((next_beat->measure - current_beat->measure) * current_beat->numerator) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator);
             }
+            // if the next beat doesnt apply to the given measure
             else
             {
-                total_subbeats += ((measure - current_beat->measure) * current_beat->numerator + beat) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator) + subbeat;
+                total_subbeats += note_to_subbeat_end(measure, beat, subbeat, current_beat);
                 break;
             }
         }
@@ -74,10 +83,10 @@ void load_notes_mesh(Mesh *mesh,
             Note *note = &notes[l][n];
 
             // get the subbeat the note starts on
-            int start_subbeat = get_total_subbeats_by_time(chart,
-                                                           note->start_measure,
-                                                           note->start_beat,
-                                                           note->start_subbeat);
+            int start_subbeat = note_to_subbeat(chart,
+                                                note->start_measure,
+                                                note->start_beat,
+                                                note->start_subbeat);
 
             // calculate the position of the note
             int lane = abs(l - (num_lanes - 1)); //lanes are rendered mirrored for some reason
@@ -93,10 +102,10 @@ void load_notes_mesh(Mesh *mesh,
             if (note->hold)
             {
                 // get the length of the hold in subbeats
-                int length_subbeats = get_total_subbeats_by_time(chart,
-                                                                 note->end_measure,
-                                                                 note->end_beat,
-                                                                 note->end_subbeat);
+                int length_subbeats = note_to_subbeat(chart,
+                                                      note->end_measure,
+                                                      note->end_beat,
+                                                      note->end_subbeat);
 
                 // resize the note
                 size.y = position_by_subbeat(length_subbeats, speed) - position.y;
@@ -197,7 +206,7 @@ void cache_tempo_times(Track *track)
     for (int i = 0; i < track->chart->num_tempos; i++)
     {
         Tempo *tempo = &track->chart->tempos[i];
-        track->tempo_subbeats[i] = get_total_subbeats_by_time(track->chart, tempo->measure, tempo->beat, tempo->subbeat);
+        track->tempo_subbeats[i] = note_to_subbeat(track->chart, tempo->measure, tempo->beat, tempo->subbeat);
     }
 
     double total_duration = 0;
@@ -229,7 +238,7 @@ Track *track_create(Chart *chart)
     track->chart = chart;
     track->tempo_times = malloc(CHART_EVENTS_MAX * sizeof(double));
     track->tempo_subbeats = malloc(CHART_EVENTS_MAX * sizeof(double));
-    track->end_subbeat = get_total_subbeats_by_time(track->chart, track->chart->end_measure, track->chart->end_beat, track->chart->end_subbeat);
+    track->end_subbeat = note_to_subbeat(track->chart, track->chart->end_measure, track->chart->end_beat, track->chart->end_subbeat);
     track->tempo_index = 0;
     track->speed = 0;
 
