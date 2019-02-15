@@ -12,11 +12,6 @@
 // could maybe get time measure by caching the length of the chart (combine all bpm durations?)
 // then divide that by time to get % and do something to convert that to measure using measure size
 
-float position_by_subbeat(int subbeat, double speed)
-{
-    return (float)subbeat / CHART_BEAT_MAX_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
-}
-
 int note_to_subbeat_end(uint16_t measure, uint8_t beat, uint8_t subbeat, Beat *current_beat)
 {
     // return the amount of subbeats between the given beat and note
@@ -62,9 +57,9 @@ int note_to_subbeat(Chart *chart, uint16_t measure, uint8_t beat, uint8_t subbea
     return total_subbeats;
 }
 
-double get_time_by_subbeat_and_bpm(int subbeat, float bpm)
+float position_by_subbeat(int subbeat, double speed)
 {
-    return ((double)subbeat / CHART_BEAT_MAX_SUBBEATS) * (60.0f / bpm) * 1000.0;
+    return (float)subbeat / CHART_BEAT_MAX_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
 }
 
 void load_notes_mesh(Mesh *mesh,
@@ -201,6 +196,11 @@ void reload_meshes(Track *track)
                     track->speed);
 }
 
+double time_for_subbeat_at_tempo(int subbeat, Tempo *tempo)
+{
+    return ((double)subbeat / CHART_BEAT_MAX_SUBBEATS) * (60.0f / tempo->bpm) * 1000.0;
+}
+
 void cache_tempo_times(Track *track)
 {
     for (int i = 0; i < track->chart->num_tempos; i++)
@@ -224,7 +224,7 @@ void cache_tempo_times(Track *track)
             next_subbeat = track->end_subbeat;
 
         Tempo *tempo = &track->chart->tempos[i];
-        double duration = get_time_by_subbeat_and_bpm(next_subbeat - subbeat, tempo->bpm);
+        double duration = time_for_subbeat_at_tempo(next_subbeat - subbeat, tempo);
         total_duration += duration;
     }
 }
@@ -365,7 +365,7 @@ void track_draw(Track *track, double time, double speed)
         end_time = track->tempo_times[track->tempo_index + 1];
     else
     {
-        double duration = get_time_by_subbeat_and_bpm(track->end_subbeat - track->tempo_subbeats[track->tempo_index], tempo->bpm);
+        double duration = time_for_subbeat_at_tempo(track->end_subbeat - track->tempo_subbeats[track->tempo_index], tempo);
         end_time = start_time + duration;
     }
 
