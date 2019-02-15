@@ -1,166 +1,223 @@
 #include "track.h"
 
 #include <stdlib.h>
-#include <stdbool.h>
-#include <inttypes.h>
-#include <assert.h>
 #include <math.h>
+#include <inttypes.h>
 
 #define MATH_3D_IMPLEMENTATION
 #include <arkanis/math_3d.h>
 
 #include "screen.h"
 
-bool time_is_after(uint16_t lhs_measure, uint8_t lhs_beat, uint8_t lhs_subbeat,
-                   uint16_t rhs_measure, uint8_t rhs_beat, uint8_t rhs_subbeat)
+// could maybe get time measure by caching the length of the chart (combine all bpm durations?)
+// then divide that by time to get % and do something to convert that to measure using measure size
+
+// todo: get_position -> height_by_subbeat
+float get_position(int subbeat, double speed)
 {
-    return lhs_measure > rhs_measure ||
-           lhs_measure == rhs_measure && lhs_beat > rhs_beat ||
-           lhs_measure == rhs_measure && lhs_beat == rhs_beat && lhs_subbeat > rhs_subbeat;
+    return (float)subbeat / CHART_BEAT_MAX_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
 }
 
-double time_difference(Beat *beat,
-                       Tempo *tempo,
-                       uint16_t lhs_measure, uint8_t lhs_beat,
-                       uint16_t rhs_measure, uint8_t rhs_beat)
+int get_total_subbeats_by_time(Chart *chart, uint16_t measure, uint8_t beat, uint8_t subbeat)
 {
-    // get the difference in beats
-    int num_beats = 0;
-    num_beats += (lhs_measure - rhs_measure) * beat->numerator; //todo: denominator?
-    num_beats += lhs_beat - rhs_beat;
+    int total_subbeats = 0;
 
-    // convert and return the difference in milliseconds
-    // minutes * 60,000ms (60s, 1min) to get ms
-    return (num_beats / tempo->bpm) * 60000;
-}
-
-Beat *beat_for_time(Chart *chart, uint16_t measure, uint8_t beat, uint8_t subbeat)
-{
-    // find the first beat at or before the given time
-    Beat *last_beat;
+    if (measure == 0 && beat == 0 && subbeat == 0)
+        return 0;
 
     // for each beat
     for (int i = 0; i < chart->num_beats; i++)
     {
-        // get the current beat
+        // get the current and next beat, if it exists
         Beat *current_beat = &chart->beats[i];
 
-        // break if the current beat is after the given time
-        if (time_is_after(current_beat->measure, current_beat->beat, current_beat->subbeat,
-                          measure, beat, subbeat))
-            break;
-
-        // set last_beat as current_beat is now validated
-        last_beat = current_beat;
-    }
-
-    // assert that a valid beat was found
-    assert(last_beat);
-
-    // return the last beat
-    return last_beat;
-}
-
-Tempo *tempo_for_time(Chart *chart, uint16_t measure, uint8_t beat, uint8_t subbeat)
-{
-    // find the first tempo at or before the given time
-    Tempo *last_tempo;
-
-    // for each tempo
-    for (int i = 0; i < chart->num_tempos; i++)
-    {
-        // get the current tempo
-        Tempo *current_tempo = &chart->tempos[i];
-
-        // break if the current tempo is after the given time
-        if (time_is_after(current_tempo->measure, current_tempo->beat, current_tempo->subbeat,
-                          measure, beat, subbeat))
-            break;
-
-        // set last_tempo as current_tempo is now validated
-        last_tempo = current_tempo;
-    }
-
-    // assert that a valid tempo was found
-    assert(last_tempo);
-
-    // return the last tempo
-    return last_tempo;
-}
-
-void cache_beat_times(Track *track)
-{
-    // the time, in ms, the last beat was at
-    double last_time = 0;
-
-    // for each beat
-    for (int i = 0; i < track->chart->num_beats; i++)
-    {
-        // get the current beat
-        Beat *beat = &track->chart->beats[i];
-
-        // get the previous tempo, if there is one
-        Beat *previous_beat = NULL;
-        if (i > 0)
-            previous_beat = &track->chart->beats[i - 1];
-
-        // get the tempo for the current beat
-        Tempo *tempo = tempo_for_time(track->chart, beat->measure, beat->beat, beat->subbeat);
-
-        // get the difference between the current and previous beats
-        double beat_difference = 0;
-        if (previous_beat)
+        if (i == chart->num_beats - 1)
         {
-            // get the difference if there is a previous beat
-            beat_difference = time_difference(beat,
-                                              tempo,
-                                              beat->measure, beat->beat,
-                                              previous_beat->measure, previous_beat->beat);
+            total_subbeats += ((measure - current_beat->measure) * current_beat->numerator + beat) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator) + subbeat;
+        }
+        else
+        {
+            Beat *next_beat = &chart->beats[i + 1];
+
+            if (measure >= next_beat->measure)
+            {
+                total_subbeats += ((next_beat->measure - current_beat->measure) * current_beat->numerator) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator);
+            }
+            else
+            {
+                total_subbeats += ((measure - current_beat->measure) * current_beat->numerator + beat) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator) + subbeat;
+                break;
+            }
+        }
+    }
+
+    return total_subbeats;
+}
+
+double get_time_by_subbeat_and_bpm(int subbeat, float bpm)
+{
+    return ((double)subbeat / CHART_BEAT_MAX_SUBBEATS) * (60.0f / bpm) * 1000.0;
+}
+
+void load_notes_mesh(Mesh *mesh,
+                    Chart *chart,
+                    int num_lanes,
+                    int num_notes[num_lanes],
+                    Note *notes[num_lanes],
+                    vec3_t track_size,
+                    float width,
+                    double speed)
+{
+    for (int l = 0; l < num_lanes; l++)
+    {
+        for (int n = 0; n < num_notes[l]; n++)
+        {
+            Note *note = &notes[l][n];
+
+            // get the subbeat the note starts on
+            int start_subbeat = get_total_subbeats_by_time(chart,
+                                                           note->start_measure,
+                                                           note->start_beat,
+                                                           note->start_subbeat);
+
+            // calculate the position of the note
+            int lane = abs(l - (num_lanes - 1)); //lanes are rendered mirrored for some reason
+            vec3_t position = vec3((lane * width) - (track_size.x / 2),
+                                   get_position(start_subbeat, speed),
+                                   0);
+
+            // calculate the size of the note
+            vec3_t size = vec3(width,
+                               TRACK_CHIP_HEIGHT,
+                               0);
+
+            if (note->hold)
+            {
+                // get the length of the hold in subbeats
+                int length_subbeats = get_total_subbeats_by_time(chart,
+                                                                 note->end_measure,
+                                                                 note->end_beat,
+                                                                 note->end_subbeat);
+
+                // resize the note
+                size.y = get_position(length_subbeats, speed) - position.y;
+            }
+
+            // add the note to the mesh
+            mesh_set_vertices_quad_pos(mesh,
+                                       ((l * CHART_NOTES_MAX) + n) * MESH_VERTICES_QUAD,
+                                       size.x, size.y,
+                                       position);
+        }
+    }
+}
+
+void reload_meshes(Track *track)
+{
+    int beat_index = 0;
+    int tempo_index = 0;
+    int total_beats = 0;
+
+    // calculate reused values
+    vec3_t track_size = vec3(TRACK_WIDTH * 2, TRACK_LENGTH * 2, 0);
+
+    // for each measure
+    for (uint16_t m = 0; m < track->chart->end_measure + 1; m++)
+    {
+        // increment the current beat if the next one is after the current measure
+        if (beat_index < track->chart->num_beats - 1 &&
+            m >= track->chart->beats[beat_index + 1].measure)
+            beat_index++;
+
+        // increment the current tempo if the next one is after the current measure
+        if (tempo_index < track->chart->num_tempos - 1 &&
+            m >= track->chart->tempos[tempo_index + 1].measure)
+            tempo_index++;
+
+        // get the current beat and tempo
+        Beat *beat = &track->chart->beats[beat_index];
+        Tempo *tempo = &track->chart->tempos[tempo_index];
+
+        // increment total_beats
+        total_beats += beat->numerator;
+    }
+
+    // draw the beat/measure lines
+    for (int i = 0; i < total_beats; i++)
+    {
+        // calculate the position and size of the bar
+        vec3_t position = vec3(-track_size.x / 2, get_position(i * CHART_BEAT_MAX_SUBBEATS, track->speed), 0);
+        vec3_t size = vec3(track_size.x, TRACK_BAR_HEIGHT, 0);
+
+        // get the respective mesh and offset for the current bar
+        Mesh *mesh;
+        int offset;
+
+        // the first and every 4th beat is a measure bar, all others are beats
+        if (i % 4 == 0 || i == 0)
+        {
+            mesh = track->measure_bars_mesh;
+            offset = (i / 4) * MESH_VERTICES_QUAD;
+        }
+        else
+        {
+            mesh = track->beat_bars_mesh;
+            offset = i * MESH_VERTICES_QUAD;
         }
 
-        // increment last_time for the current beat
-        last_time += beat_difference;
-
-        // set the current beats time
-        track->beat_times[i] = last_time;
+        // create the bar
+        mesh_set_vertices_quad_pos(mesh,
+                                   offset,
+                                   size.x, size.y,
+                                   position);
     }
+
+    // load the bt notes
+    load_notes_mesh(track->bt_notes_mesh,
+                   track->chart,
+                   CHART_BT_LANES,
+                   track->chart->num_bt_notes,
+                   track->chart->bt_notes,
+                   track_size,
+                   TRACK_BT_WIDTH * 2,
+                   track->speed);
+
+    // load the fx notes
+    load_notes_mesh(track->fx_notes_mesh,
+                    track->chart,
+                    CHART_FX_LANES,
+                    track->chart->num_fx_notes,
+                    track->chart->fx_notes,
+                    track_size,
+                    TRACK_BT_WIDTH * 4,
+                    track->speed);
 }
 
 void cache_tempo_times(Track *track)
 {
-    // the time, in ms, the last tempo was at
-    double last_time = 0;
-
-    // for each tempo
     for (int i = 0; i < track->chart->num_tempos; i++)
     {
-        // get the current tempo
         Tempo *tempo = &track->chart->tempos[i];
+        track->tempo_subbeats[i] = get_total_subbeats_by_time(track->chart, tempo->measure, tempo->beat, tempo->subbeat);
+    }
 
-        // get the previous tempo, if there is one
-        Tempo *previous_tempo = NULL;
-        if (i > 0)
-            previous_tempo = &track->chart->tempos[i - 1];
+    double total_duration = 0;
 
-        // get the beat for the current tempo
-        Beat *beat = beat_for_time(track->chart, tempo->measure, tempo->beat, tempo->subbeat);
+    for (int i = 0; i < track->chart->num_tempos; i++)
+    {
+        track->tempo_times[i] = total_duration;
 
-        // get the difference between the current and previous tempos
-        double tempo_difference = 0;
-        if (previous_tempo)
-        {
-            // get the difference if there is a previous tempo
-            tempo_difference = time_difference(beat,
-                                               tempo,
-                                               tempo->measure, tempo->beat,
-                                               previous_tempo->measure, previous_tempo->beat);
-        }
+        int subbeat = track->tempo_subbeats[i];
+        int next_subbeat;
 
-        // increment last_time for the current tempo
-        last_time += tempo_difference;
+        if (i + 1 < track->chart->num_tempos)
+            next_subbeat = track->tempo_subbeats[i + 1];
+        else
+            next_subbeat = track->end_subbeat;
 
-        // set the current tempos time
-        track->tempo_times[i] = last_time;
+        Tempo *tempo = &track->chart->tempos[i];
+        double duration = get_time_by_subbeat_and_bpm(next_subbeat - subbeat, tempo->bpm);
+        total_duration += duration;
     }
 }
 
@@ -171,12 +228,11 @@ Track *track_create(Chart *chart)
 
     // set the track properties
     track->chart = chart;
-
-    // allocate and cache the beat and tempo times
-    track->beat_times = malloc(CHART_EVENTS_MAX * sizeof(double));
     track->tempo_times = malloc(CHART_EVENTS_MAX * sizeof(double));
-    cache_beat_times(track);
-    cache_tempo_times(track);
+    track->tempo_subbeats = malloc(CHART_EVENTS_MAX * sizeof(double));
+    track->end_subbeat = get_total_subbeats_by_time(track->chart, track->chart->end_measure, track->chart->end_beat, track->chart->end_subbeat);
+    track->tempo_index = 0;
+    track->speed = 0;
 
     // create the lane program and mesh
     track->lane_program = program_create("lane.vs", "lane.fs", true);
@@ -191,6 +247,17 @@ Track *track_create(Chart *chart)
     track->beat_bars_program = program_create("beat_bar.vs", "beat_bar.fs", true);
     track->beat_bars_mesh = mesh_create(MESH_VERTICES_QUAD * TRACK_BEAT_BARS_MAX * TRACK_MEASURE_BARS_MAX, track->beat_bars_program);
 
+    // create the bt notes program and mesh
+    track->bt_notes_program = program_create("bt_note.vs", "bt_note.fs", true);
+    track->bt_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_BT_LANES * CHART_NOTES_MAX, track->bt_notes_program);
+
+    // create the fx notes program and mesh
+    track->fx_notes_program = program_create("fx_note.vs", "fx_note.fs", true);
+    track->fx_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_FX_LANES * CHART_NOTES_MAX, track->fx_notes_program);
+
+    // cache the tempo times
+    cache_tempo_times(track);
+
     // return the track
     return track;
 }
@@ -201,84 +268,62 @@ void track_free(Track *track)
     program_free(track->lane_program);
     program_free(track->measure_bars_program);
     program_free(track->beat_bars_program);
+    program_free(track->bt_notes_program);
+    program_free(track->fx_notes_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
     mesh_free(track->measure_bars_mesh);
     mesh_free(track->beat_bars_mesh);
+    mesh_free(track->bt_notes_mesh);
+    mesh_free(track->fx_notes_mesh);
 
     // free all the allocated properties
-    free(track->beat_times);
     free(track->tempo_times);
+    free(track->tempo_subbeats);
 
     // free the track
     free(track);
 }
 
-bool update_current_event(Track *track,
-                          double time,
-                          int num_events,
-                          double *event_times,
-                          int *current_event_index)
-{
-    // get the index of the event for the given time
-    int index = 0;
-
-    // for each event
-    for (int i = 0; i < num_events; i++)
-    {
-        // break if the current event is after the given time
-        if (event_times[i] > time)
-            break;
-
-        // set index as i is now validated
-        index = i;
-    }
-
-    // store whether or not the event index changed
-    bool changed = index != *current_event_index;
-
-    // set the current event index
-    *current_event_index = index;
-
-    // return whether or not the event index changed
-    return changed;
-}
-
 void track_draw(Track *track, double time, double speed)
 {
-    // update the current beat and tempo
-    bool beat_changed = update_current_event(track,
-                                             time,
-                                             track->chart->num_beats,
-                                             track->beat_times,
-                                             &track->current_beat_index);
+    // update the track speed and tempo
+    bool reload = false;
 
-    bool tempo_changed = update_current_event(track,
-                                              time,
-                                              track->chart->num_tempos,
-                                              track->tempo_times,
-                                              &track->current_tempo_index);
+    if (track->speed != speed)
+    {
+        track->speed = speed;
+        reload = true;
+    }
 
-    // get the current beat and tempo
-    Beat *beat = &track->chart->beats[track->current_beat_index];
-    Tempo *tempo = &track->chart->tempos[track->current_tempo_index];
+    // update the current tempo
+    int before_tempo_index = track->tempo_index;
 
-    // get the current tempos time
-    double tempo_time = track->tempo_times[track->current_tempo_index];
+    for (int i = 0; i < track->chart->num_tempos; i++)
+    {
+        if (track->tempo_times[i] > time)
+            break;
 
-    // get the measure of time by adding an offset from tempos time
-    // this allows this calculation to ignore previous beats/tempos
-    double offset_beats = ((time - tempo_time) / 60000) * tempo->bpm;
+        track->tempo_index = i;
+    }
 
-    // todo: this may be incorrect, but seems right so far
-    uint16_t time_measure = tempo->measure + (offset_beats / beat->denominator);
+    if (track->tempo_index != before_tempo_index)
+        reload = true;
+
+    // reload the track meshes if its needed
+    // todo: this is not an acceptable solution, but works for testing
+    // reloading everything on one of the above events is much too costly
+    // loading should be buffered, in that it only loads x measures that are visible then deletes/loads new ones on scroll
+    // then these reload events only have to reload a small portion of the measures and new ones will be created with the params
+    if (reload)
+        reload_meshes(track);
 
     // create the projection matrix
     mat4_t projection = m4_perspective(90.0f,
                                        (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT,
                                        0.1f,
-                                       TRACK_LENGTH + TRACK_CAMERA_OFFSET); //clip past the end of the track
+                                       TRACK_LENGTH + -TRACK_CAMERA_OFFSET); //clip past the end of the track
 
     // create the view matrix
     mat4_t view = m4_look_at(vec3(0, 0, -TRACK_LENGTH + TRACK_CAMERA_OFFSET),
@@ -296,6 +341,55 @@ void track_draw(Track *track, double time, double speed)
     program_set_matrices(track->lane_program, projection, view, model);
     mesh_draw(track->lane_mesh);
 
+    // scroll the bars and notes
+    // todo: proper scrolling calculations
+    // tempo = track->chart->tempos[track->tempo_index]
+    // time = track->tempo_times[track->tempo_index]
+    // scroll += time / 60000 * tempo->bpm * speed * ((TRACK_LENGTH * 2) / TRACK_BEAT_SPEED))
+
+    // get the tempo and start time
+    Tempo *tempo = &track->chart->tempos[track->tempo_index];
+    double start_time = track->tempo_times[track->tempo_index];
+
+    // get the end time
+    double end_time;
+    if (track->tempo_index + 1 < track->chart->num_tempos)
+        end_time = track->tempo_times[track->tempo_index + 1];
+    else
+    {
+        double duration = get_time_by_subbeat_and_bpm(track->end_subbeat - track->tempo_subbeats[track->tempo_index], tempo->bpm);
+        end_time = start_time + duration;
+    }
+
+    // calculate the percentage of the current tempo the track should be scrolled to
+    float percent = (time - start_time) / (end_time - start_time);
+
+    // get the current tempo position
+    int start_subbeat = track->tempo_subbeats[track->tempo_index];
+    float start_position = get_position(start_subbeat, speed);
+
+    // get the next tempo position
+    int end_subbeat;
+    if (track->tempo_index + 1 < track->chart->num_tempos)
+        end_subbeat = track->tempo_subbeats[track->tempo_index + 1];
+    else
+        end_subbeat = track->end_subbeat;
+
+    float end_position_offset = get_position(end_subbeat - start_subbeat, speed);
+
+    // scroll the chart
+    float scroll = -(start_position + (end_position_offset * percent));
+
+    // !!!!!!! WORKS !!!!!!!
+    // except for the end bpm
+
+    // subtract track_length so 0 scroll is at the start of the track, not the middle
+    model = m4_mul(model, m4_translation(vec3(0, scroll - TRACK_LENGTH, 0)));
+
+    // draw the bars and notes above the track
+    // todo: theres probably a better way to do this
+    model = m4_mul(model, m4_translation(vec3(0, 0, -0.01f)));
+
     // draw the measure bars
     program_use(track->measure_bars_program);
     program_set_matrices(track->measure_bars_program, projection, view, model);
@@ -305,4 +399,16 @@ void track_draw(Track *track, double time, double speed)
     program_use(track->beat_bars_program);
     program_set_matrices(track->beat_bars_program, projection, view, model);
     mesh_draw(track->beat_bars_mesh);
+
+    // draw the bt notes
+    model = m4_mul(model, m4_translation(vec3(0, 0, -0.02f)));
+    program_use(track->bt_notes_program);
+    program_set_matrices(track->bt_notes_program, projection, view, model);
+    mesh_draw(track->bt_notes_mesh);
+
+    // draw the fx notes
+    model = m4_mul(model, m4_translation(vec3(0, 0, 0.01f)));
+    program_use(track->fx_notes_program);
+    program_set_matrices(track->fx_notes_program, projection, view, model);
+    mesh_draw(track->fx_notes_mesh);
 }

@@ -19,24 +19,22 @@
 // the offset, on the z axis, of the camera from the start of the track
 #define TRACK_CAMERA_OFFSET -11.5f
 
+// the number of beats that should be visible at 1x speed
+#define TRACK_BEAT_SPEED 8
+
+// the height of a measure or beat bar on the track
+#define TRACK_BAR_HEIGHT 0.025f
+
+// the height of a bt or fx chip on the track
+#define TRACK_CHIP_HEIGHT 0.075f
+
+// the width of a bt note on the track
+#define TRACK_BT_WIDTH TRACK_WIDTH / CHART_BT_LANES
+
 typedef struct
 {
     // the chart this track is displaying
     Chart *chart;
-
-    // the time, in ms, of each of charts beats
-    // this array is equal in length and represents values at the same index as chart->beats
-    double *beat_times;
-
-    // the time, in ms, of each of charts tempos
-    // this array is equal in length and represents values at the same index as chart->tempos
-    double *tempo_times;
-
-    // the index of the current beat this track is on
-    int current_beat_index;
-
-    // the index of the current tempo this track is on
-    int current_tempo_index;
 
     // the lane (track background) program and mesh
     Program *lane_program;
@@ -49,6 +47,31 @@ typedef struct
     // the beat bars program and mesh
     Program *beat_bars_program;
     Mesh *beat_bars_mesh;
+
+    // the bt notes program and mesh
+    Program *bt_notes_program;
+    Mesh *bt_notes_mesh;
+
+    // the fx notes program and mesh
+    Program *fx_notes_program;
+    Mesh *fx_notes_mesh;
+
+    // the times, in ms, of each tempo in chart->tempos
+    double *tempo_times;
+
+    // the subbeat of each tempo in chart->tempos
+    // todo: removeme...?
+    int *tempo_subbeats;
+
+    // the subbeat this tracks chart ends on
+    // todo: removeme...?
+    int end_subbeat;
+
+    // the index of the current tempo this track is at
+    int tempo_index;
+
+    // the current speed this track is scrolling at
+    double speed;
 } Track;
 
 Track *track_create(Chart *chart);
