@@ -1,6 +1,7 @@
 CC = gcc
 CFLAGS = -I/opt/vc/include -Iinclude -Iinclude/vvd
-LDFLAGS = -L/opt/vc/lib -lbrcmGLESv2 -lbrcmEGL -lbcm_host -lm -ludev -lportaudio -lsndfile
+BIN = bin
+LDFLAGS = -L/opt/vc/lib -L$(BIN) -lbrcmGLESv2 -lbrcmEGL -lbcm_host -lm -ludev -lbass -Wl,-rpath,"\$$ORIGIN"
 MKDIR_P = mkdir -p
 CP = cp
 RM = rm
@@ -11,11 +12,11 @@ DEP = $(wildcard include/*.c)
 OBJ = $(SRC:.c=.o)
 SHADERS = $(wildcard shaders/*.fs shaders/*.vs)
 
-BIN = bin
 TARGET = $(BIN)/vvd
 SHADERS_TARGET = $(BIN)/shaders
+BASS_TARGET = $(BIN)/libbass.so
 
-all: $(TARGET) $(SHADERS_TARGET)
+all: $(BASS_TARGET) $(TARGET) $(SHADERS_TARGET)
 
 $(TARGET): $(OBJ)
 	$(MKDIR_P) $(BIN)
@@ -25,6 +26,9 @@ $(TARGET): $(OBJ)
 $(SHADERS_TARGET): $(SHADERS)
 	$(MKDIR_P) $(@)
 	$(CP) $^ $@
+
+$(BASS_TARGET):
+	$(CP) lib/libbass.so $@
 
 .PHONY: clean
 clean:
