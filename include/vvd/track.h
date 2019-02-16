@@ -6,7 +6,6 @@
 
 // max values
 #define TRACK_MEASURE_BARS_MAX 512
-#define TRACK_BEAT_BARS_MAX 32 //per-measure
 
 // the size of the track
 #define TRACK_WIDTH 1.0f
@@ -43,10 +42,6 @@ typedef struct
     // the measure bars program and mesh
     Program *measure_bars_program;
     Mesh *measure_bars_mesh;
-
-    // the beat bars program and mesh
-    Program *beat_bars_program;
-    Mesh *beat_bars_mesh;
 
     // the bt notes program and mesh
     Program *bt_notes_program;

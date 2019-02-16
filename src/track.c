@@ -138,31 +138,19 @@ void reload_meshes(Track *track)
     // draw the beat/measure lines
     for (int i = 0; i < total_beats; i++)
     {
-        // calculate the position and size of the bar
-        vec3_t position = vec3(-track_size.x / 2, position_by_subbeat(i * CHART_BEAT_MAX_SUBBEATS, track->speed), 0);
-        vec3_t size = vec3(track_size.x, TRACK_BAR_HEIGHT, 0);
-
-        // get the respective mesh and offset for the current bar
-        Mesh *mesh;
-        int offset;
-
-        // the first and every 4th beat is a measure bar, all others are beats
+        // the first and every 4th beat is a measure bar
         if (i % 4 == 0 || i == 0)
         {
-            mesh = track->measure_bars_mesh;
-            offset = (i / 4) * MESH_VERTICES_QUAD;
-        }
-        else
-        {
-            mesh = track->beat_bars_mesh;
-            offset = i * MESH_VERTICES_QUAD;
-        }
+            // calculate the position and size of the bar
+            vec3_t position = vec3(-track_size.x / 2, position_by_subbeat(i * CHART_BEAT_MAX_SUBBEATS, track->speed), 0);
+            vec3_t size = vec3(track_size.x, TRACK_BAR_HEIGHT, 0);
 
-        // create the bar
-        mesh_set_vertices_quad_pos(mesh,
-                                   offset,
-                                   size.x, size.y,
-                                   position);
+            // create the bar
+            mesh_set_vertices_quad_pos(track->measure_bars_mesh,
+                                       (i / 4) * MESH_VERTICES_QUAD,
+                                       size.x, size.y,
+                                       position);
+        }
     }
 
     // load the bt notes
@@ -224,6 +212,9 @@ Track *track_create(Chart *chart)
     // create the track
     Track *track = malloc(sizeof(Track));
 
+    // todo: can malloc the actual size of the arrays instead of max
+    // the chart is already loaded and is not modified at any point during playback
+
     // set the track properties
     track->chart = chart;
     track->tempo_times = malloc(CHART_EVENTS_MAX * sizeof(double));
@@ -240,10 +231,6 @@ Track *track_create(Chart *chart)
     // create the measure bars program and mesh
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
     track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * TRACK_MEASURE_BARS_MAX, track->measure_bars_program);
-
-    // create the beat bars program and mesh
-    track->beat_bars_program = program_create("beat_bar.vs", "beat_bar.fs", true);
-    track->beat_bars_mesh = mesh_create(MESH_VERTICES_QUAD * TRACK_BEAT_BARS_MAX * TRACK_MEASURE_BARS_MAX, track->beat_bars_program);
 
     // create the bt notes program and mesh
     track->bt_notes_program = program_create("bt_note.vs", "bt_note.fs", true);
@@ -265,14 +252,12 @@ void track_free(Track *track)
     // free all the programs
     program_free(track->lane_program);
     program_free(track->measure_bars_program);
-    program_free(track->beat_bars_program);
     program_free(track->bt_notes_program);
     program_free(track->fx_notes_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
     mesh_free(track->measure_bars_mesh);
-    mesh_free(track->beat_bars_mesh);
     mesh_free(track->bt_notes_mesh);
     mesh_free(track->fx_notes_mesh);
 
@@ -333,10 +318,6 @@ void track_draw(Track *track, double time, double speed)
     mesh_draw(track->lane_mesh);
 
     // scroll the bars and notes
-    // todo: proper scrolling calculations
-    // tempo = track->chart->tempos[track->tempo_index]
-    // time = track->tempo_times[track->tempo_index]
-    // scroll += time / 60000 * tempo->bpm * speed * ((TRACK_LENGTH * 2) / TRACK_BEAT_SPEED))
 
     // get the tempo and start time
     Tempo *tempo = &track->chart->tempos[track->tempo_index];
@@ -371,9 +352,6 @@ void track_draw(Track *track, double time, double speed)
     // scroll the chart
     float scroll = -(start_position + (end_position_offset * percent));
 
-    // !!!!!!! WORKS !!!!!!!
-    // except for the end bpm
-
     // subtract track_length so 0 scroll is at the start of the track, not the middle
     model = m4_mul(model, m4_translation(vec3(0, scroll - TRACK_LENGTH, 0)));
 
@@ -385,11 +363,6 @@ void track_draw(Track *track, double time, double speed)
     program_use(track->measure_bars_program);
     program_set_matrices(track->measure_bars_program, projection, view, model);
     mesh_draw(track->measure_bars_mesh);
-
-    // draw the beat bars
-    program_use(track->beat_bars_program);
-    program_set_matrices(track->beat_bars_program, projection, view, model);
-    mesh_draw(track->beat_bars_mesh);
 
     // draw the bt notes
     model = m4_mul(model, m4_translation(vec3(0, 0, -0.02f)));
