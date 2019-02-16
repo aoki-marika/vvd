@@ -117,40 +117,38 @@ void load_notes_mesh(Mesh *mesh,
 
 void reload_meshes(Track *track)
 {
-    int beat_index = 0;
-    int total_beats = 0;
-
-    // for each measure
-    for (uint16_t m = 0; m < track->chart->end_measure + 1; m++)
-    {
-        // increment the current beat if the next one is after the current measure
-        if (beat_index < track->chart->num_beats - 1 &&
-            m >= track->chart->beats[beat_index + 1].measure)
-            beat_index++;
-
-        // increment total_beats using the current beats numerator
-        total_beats += track->chart->beats[beat_index].numerator;
-    }
-
     // calculate reused values
     vec3_t track_size = vec3(TRACK_WIDTH * 2, TRACK_LENGTH * 2, 0);
 
-    // draw the beat/measure lines
-    for (int i = 0; i < total_beats; i++)
-    {
-        // the first and every 4th beat is a measure bar
-        if (i % 4 == 0 || i == 0)
-        {
-            // calculate the position and size of the bar
-            vec3_t position = vec3(-track_size.x / 2, position_by_subbeat(i * CHART_BEAT_MAX_SUBBEATS, track->speed), 0);
-            vec3_t size = vec3(track_size.x, TRACK_BAR_HEIGHT, 0);
+    // draw all the measure bars
+    int beat_index = 0;
+    vec3_t measure_position = vec3(-track_size.x / 2, 0, 0);
 
-            // create the bar
-            mesh_set_vertices_quad_pos(track->measure_bars_mesh,
-                                       (i / 4) * MESH_VERTICES_QUAD,
-                                       size.x, size.y,
-                                       position);
-        }
+    for (uint16_t i = 0; i < track->chart->end_measure + 1; i++)
+    {
+        // create the measure bar for the current measure
+        mesh_set_vertices_quad_pos(track->measure_bars_mesh,
+                                   i * MESH_VERTICES_QUAD,
+                                   track_size.x,
+                                   TRACK_BAR_HEIGHT,
+                                   measure_position);
+
+        // increment the current beat if the next one is at or before the current measure
+        if (beat_index + 1 < track->chart->num_beats &&
+            i >= track->chart->beats[beat_index + 1].measure)
+            beat_index++;
+
+        // get the start and end position of this measure, as if it was in 4/4 time
+        Beat *beat = &track->chart->beats[beat_index];
+        float start_position = position_by_subbeat((i - 1) * 4 * CHART_BEAT_MAX_SUBBEATS, track->speed);
+        float end_position = position_by_subbeat(i * 4 * CHART_BEAT_MAX_SUBBEATS, track->speed);
+
+        // get the size of the current measure as if it was 4/4 time by getting the difference between the start and end
+        // then multiply by numerator/denominator to get the final size of the measure
+        float measure_size = (end_position - start_position) * ((float)beat->numerator / (float)beat->denominator);
+
+        // increment measure_position.y for the next measure
+        measure_position.y += measure_size;
     }
 
     // load the bt notes
