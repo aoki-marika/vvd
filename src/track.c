@@ -118,11 +118,7 @@ void load_notes_mesh(Mesh *mesh,
 void reload_meshes(Track *track)
 {
     int beat_index = 0;
-    int tempo_index = 0;
     int total_beats = 0;
-
-    // calculate reused values
-    vec3_t track_size = vec3(TRACK_WIDTH * 2, TRACK_LENGTH * 2, 0);
 
     // for each measure
     for (uint16_t m = 0; m < track->chart->end_measure + 1; m++)
@@ -132,18 +128,12 @@ void reload_meshes(Track *track)
             m >= track->chart->beats[beat_index + 1].measure)
             beat_index++;
 
-        // increment the current tempo if the next one is after the current measure
-        if (tempo_index < track->chart->num_tempos - 1 &&
-            m >= track->chart->tempos[tempo_index + 1].measure)
-            tempo_index++;
-
-        // get the current beat and tempo
-        Beat *beat = &track->chart->beats[beat_index];
-        Tempo *tempo = &track->chart->tempos[tempo_index];
-
-        // increment total_beats
-        total_beats += beat->numerator;
+        // increment total_beats using the current beats numerator
+        total_beats += track->chart->beats[beat_index].numerator;
     }
+
+    // calculate reused values
+    vec3_t track_size = vec3(TRACK_WIDTH * 2, TRACK_LENGTH * 2, 0);
 
     // draw the beat/measure lines
     for (int i = 0; i < total_beats; i++)
@@ -302,12 +292,16 @@ void track_draw(Track *track, double time, double speed)
     if (track->speed != speed)
     {
         track->speed = speed;
-        reload = true;
+
+        // reload the track meshes when speed changes
+        // todo: this is not an acceptable solution, but works for testing
+        // reloading everything on speed change is much too costly
+        // loading should be buffered, in that it only loads x measures that are visible then deletes/loads new ones on scroll
+        // then these reload events only have to reload a small portion of the measures and new ones will be created with the params
+        reload_meshes(track);
     }
 
     // update the current tempo
-    int before_tempo_index = track->tempo_index;
-
     for (int i = 0; i < track->chart->num_tempos; i++)
     {
         if (track->tempo_times[i] > time)
@@ -315,17 +309,6 @@ void track_draw(Track *track, double time, double speed)
 
         track->tempo_index = i;
     }
-
-    if (track->tempo_index != before_tempo_index)
-        reload = true;
-
-    // reload the track meshes if its needed
-    // todo: this is not an acceptable solution, but works for testing
-    // reloading everything on one of the above events is much too costly
-    // loading should be buffered, in that it only loads x measures that are visible then deletes/loads new ones on scroll
-    // then these reload events only have to reload a small portion of the measures and new ones will be created with the params
-    if (reload)
-        reload_meshes(track);
 
     // create the projection matrix
     mat4_t projection = m4_perspective(90.0f,
