@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <math.h>
 
+#include "note_utils.h"
+
 void *chart_ksh_parsing_state_create()
 {
     KshParsingState *state = malloc(sizeof(KshParsingState));
@@ -57,8 +59,7 @@ void add_beat(Chart *chart,
         .numerator = atoi(strtok(value, "/")),
         .denominator = atoi(strtok(NULL, "/")),
         .measure = measure,
-        .beat = beat,
-        .subbeat = subbeat,
+        .subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
     };
 
     // append it to the charts beats
@@ -78,9 +79,7 @@ void add_tempo(Chart *chart,
     Tempo tempo = (Tempo)
     {
         .bpm = atof(value),
-        .measure = measure,
-        .beat = beat,
-        .subbeat = subbeat,
+        .subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
     };
 
     // append it to the charts tempos
@@ -134,7 +133,8 @@ void parse_kv_pair(Chart *chart,
         printf("parse_kv_pair: unhandled key/value pair '%s':'%s'\n", key, value);
 }
 
-void parse_notes(KshParsingState *state,
+void parse_notes(Chart *chart,
+                 KshParsingState *state,
                  int num_lanes, // the number of lanes for the note type to parse
                  char *values, //the note values from the note line for this type, e.g. the '0000' of '0000|00|00' for bt notes
                  Note *processing_holds[num_lanes], //the currently processing hold notes for the note type to parse
@@ -164,9 +164,7 @@ void parse_notes(KshParsingState *state,
             // create the note
             Note note = (Note)
             {
-                .start_measure = measure,
-                .start_beat = beat,
-                .start_subbeat = subbeat,
+                .start_subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
                 .hold = hold,
             };
 
@@ -190,9 +188,7 @@ void parse_notes(KshParsingState *state,
             Note *hold = processing_holds[i];
 
             // set the end timing properties
-            hold->end_measure = measure;
-            hold->end_beat = beat;
-            hold->end_subbeat = subbeat;
+            hold->end_subbeat = note_time_to_subbeat(chart, measure, beat, subbeat);
 
             // set last note
             state->last_note = hold;
@@ -250,7 +246,8 @@ void parse_measure(Chart *chart,
             last_subbeat = fmod(current_line_subbeat, CHART_BEAT_MAX_SUBBEATS * 4 / denominator);
 
             // parse the notes of the current line
-            parse_notes(state,
+            parse_notes(chart,
+                        state,
                         CHART_BT_LANES,
                         bt,
                         state->processing_bt_holds,
@@ -260,7 +257,8 @@ void parse_measure(Chart *chart,
                         last_beat,
                         last_subbeat);
 
-            parse_notes(state,
+            parse_notes(chart,
+                        state,
                         CHART_FX_LANES,
                         fx,
                         state->processing_fx_holds,
@@ -270,22 +268,17 @@ void parse_measure(Chart *chart,
                         last_beat,
                         last_subbeat);
 
-            // update the end time of the chart
+            // update the end subbeat of the chart
             if (state->last_note)
             {
                 if (state->last_note->hold)
-                {
-                    chart->end_measure = state->last_note->end_measure;
-                    chart->end_beat = state->last_note->end_beat;
                     chart->end_subbeat = state->last_note->end_subbeat;
-                }
                 else
-                {
-                    chart->end_measure = state->last_note->start_measure;
-                    chart->end_beat = state->last_note->start_beat;
                     chart->end_subbeat = state->last_note->start_subbeat;
-                }
             }
+
+            // update the number of measures in the chart
+            chart->num_measures = state->measure + 1;
 
             // increment the current note index
             n++;
