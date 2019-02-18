@@ -196,7 +196,7 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
             case VoxSectionBpmInfo:
             {
                 // timing, bpm, ?
-                // todo: is the last value important?
+                // note: the last value is typically 4 but for the twotorial stops its -4
                 // todo: booth vox dont have timing for bpm
                 assert(num_values == 3);
 
@@ -290,7 +290,15 @@ void chart_vox_parse_line(Chart *chart, void *parsing_state, char *line)
     VoxParsingState *state = (VoxParsingState *)parsing_state;
 
     // ignore comment and blank lines
-    if (has_prefix("//", line) || strcmp(line, "") == 0)
+    // some old vox files have "sections" that are actually comments
+    if (has_prefix("//", line) ||
+        strcmp(line, "") == 0 ||
+        strcmp(line, "#====================================") == 0 ||
+        strcmp(line, "#ITEM") == 0 ||
+        strcmp(line, "#LINE") == 0 ||
+        strcmp(line, "#SONG") == 0 ||
+        strcmp(line, "# SOUND VOLTEX OUTPUT TEXT FILE") == 0 ||
+        strcmp(line, "# TRACK INFO") == 0)
         return;
 
     if (has_prefix("#", line))
