@@ -80,7 +80,9 @@ void parse_section(VoxParsingState *state, char *name)
     if (strcmp(name, "FORMAT VERSION") == 0)
         state->section = VoxSectionFormatVersion;
     // end position
-    else if (strcmp(name, "END POSITION") == 0)
+    // numerous early vox files have this typo
+    else if (strcmp(name, "END POSITION") == 0 ||
+             strcmp(name, "END POSISION") == 0)
         state->section = VoxSectionEndPosition;
     // beat info
     else if (strcmp(name, "BEAT INFO") == 0)

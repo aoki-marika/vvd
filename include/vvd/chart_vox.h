@@ -12,7 +12,7 @@ typedef enum
 {
     VoxSectionNone,          //none yet or END
     VoxSectionFormatVersion, //FORMAT VERSION
-    VoxSectionEndPosition,   //END POSITION
+    VoxSectionEndPosition,   //END POSITION or END POSISION
     VoxSectionBeatInfo,      //BEAT INFO
     VoxSectionBpmInfo,       //BPM INFO
     VoxSectionTrackAnalogL,  //TRACK1
