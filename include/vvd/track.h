@@ -51,10 +51,6 @@ typedef struct
     Program *fx_notes_program;
     Mesh *fx_notes_mesh;
 
-    // the times, in ms, of each tempo in chart->tempos
-    // todo: calculate at chart parse time
-    double *tempo_times;
-
     // the index of the current tempo this track is at
     int tempo_index;
 

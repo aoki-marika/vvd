@@ -44,6 +44,9 @@ typedef struct
     // the beats per minute of this tempo
     float bpm;
 
+    // the time in milliseconds that this tempo starts at
+    double time;
+
     // the subbeat this tempo starts at
     uint16_t subbeat;
 } Tempo;
@@ -100,3 +103,6 @@ typedef struct
 
 Chart *chart_create(const char *path);
 void chart_free(Chart *chart);
+
+// add a new tempo to the given chart with the given values
+void chart_add_tempo(Chart *chart, double bpm, uint16_t subbeat);

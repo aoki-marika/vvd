@@ -195,21 +195,13 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
             }
             case VoxSectionBpmInfo:
             {
-                // timing, bpm, ?
-                // note: the last value is typically 4 but for the twotorial stops its -4
+                // timing, bpm, direction
+                // not entirely sure how direction works but its typically 4, and for the twotorial stops its -4
                 // todo: booth vox dont have timing for bpm
                 assert(num_values == 3);
 
-                // create the tempo
-                Tempo tempo = (Tempo)
-                {
-                    .bpm = atof(values[1]),
-                    .subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
-                };
-
-                // append the tempo to the charts tempos
-                chart->tempos[chart->num_tempos] = tempo;
-                chart->num_tempos++;
+                // add the tempo to the given chart
+                chart_add_tempo(chart, atof(values[1]), note_time_to_subbeat(chart, measure, beat, subbeat));
 
                 break;
             }

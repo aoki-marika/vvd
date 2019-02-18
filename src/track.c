@@ -8,6 +8,7 @@
 #include <arkanis/math_3d.h>
 
 #include "screen.h"
+#include "note_utils.h"
 
 // could maybe get time measure by caching the length of the chart (combine all bpm durations?)
 // then divide that by time to get % and do something to convert that to measure using measure size
@@ -113,33 +114,6 @@ void reload_meshes(Track *track)
                     track->speed);
 }
 
-double time_for_subbeat_at_tempo(int subbeat, Tempo *tempo)
-{
-    return ((double)subbeat / CHART_BEAT_MAX_SUBBEATS) * (60.0f / tempo->bpm) * 1000.0;
-}
-
-void cache_tempo_times(Track *track)
-{
-    double total_duration = 0;
-
-    for (int i = 0; i < track->chart->num_tempos; i++)
-    {
-        track->tempo_times[i] = total_duration;
-
-        int subbeat = track->chart->tempos[i].subbeat;
-        int next_subbeat;
-
-        if (i + 1 < track->chart->num_tempos)
-            next_subbeat = track->chart->tempos[i + 1].subbeat;
-        else
-            next_subbeat = track->chart->end_subbeat;
-
-        Tempo *tempo = &track->chart->tempos[i];
-        double duration = time_for_subbeat_at_tempo(next_subbeat - subbeat, tempo);
-        total_duration += duration;
-    }
-}
-
 Track *track_create(Chart *chart)
 {
     // create the track
@@ -150,7 +124,6 @@ Track *track_create(Chart *chart)
 
     // set the track properties
     track->chart = chart;
-    track->tempo_times = malloc(CHART_EVENTS_MAX * sizeof(double));
     track->tempo_index = 0;
     track->speed = 0;
 
@@ -171,9 +144,6 @@ Track *track_create(Chart *chart)
     track->fx_notes_program = program_create("fx_note.vs", "fx_note.fs", true);
     track->fx_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_FX_LANES * CHART_NOTES_MAX, track->fx_notes_program);
 
-    // cache the tempo times
-    cache_tempo_times(track);
-
     // return the track
     return track;
 }
@@ -191,9 +161,6 @@ void track_free(Track *track)
     mesh_free(track->measure_bars_mesh);
     mesh_free(track->bt_notes_mesh);
     mesh_free(track->fx_notes_mesh);
-
-    // free all the allocated properties
-    free(track->tempo_times);
 
     // free the track
     free(track);
@@ -219,7 +186,7 @@ void track_draw(Track *track, double time, double speed)
     // update the current tempo
     for (int i = 0; i < track->chart->num_tempos; i++)
     {
-        if (track->tempo_times[i] > time)
+        if (track->chart->tempos[i].time > time)
             break;
 
         track->tempo_index = i;
@@ -251,15 +218,15 @@ void track_draw(Track *track, double time, double speed)
 
     // get the tempo and start time
     Tempo *tempo = &track->chart->tempos[track->tempo_index];
-    double start_time = track->tempo_times[track->tempo_index];
+    double start_time = track->chart->tempos[track->tempo_index].time;
 
     // get the end time
     double end_time;
     if (track->tempo_index + 1 < track->chart->num_tempos)
-        end_time = track->tempo_times[track->tempo_index + 1];
+        end_time = track->chart->tempos[track->tempo_index + 1].time;
     else
     {
-        double duration = time_for_subbeat_at_tempo(track->chart->end_subbeat - track->chart->tempos[track->tempo_index].subbeat, tempo);
+        double duration = subbeats_at_tempo_to_duration(tempo, track->chart->end_subbeat - track->chart->tempos[track->tempo_index].subbeat);
         end_time = start_time + duration;
     }
 

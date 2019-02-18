@@ -74,17 +74,8 @@ void add_tempo(Chart *chart,
                uint8_t beat,
                uint8_t subbeat)
 {
-    // create the tempo
-    // tempos are just a float value
-    Tempo tempo = (Tempo)
-    {
-        .bpm = atof(value),
-        .subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
-    };
-
-    // append it to the charts tempos
-    chart->tempos[chart->num_tempos] = tempo;
-    chart->num_tempos++;
+    // add the tempo to the given chart
+    chart_add_tempo(chart, atof(value), note_time_to_subbeat(chart, measure, beat, subbeat));
 }
 
 // parse a k/v pair and assign it to the respective value in the given chart

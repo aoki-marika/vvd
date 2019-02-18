@@ -7,6 +7,7 @@
 
 #include "chart_ksh.h"
 #include "chart_vox.h"
+#include "note_utils.h"
 
 void chart_parse_file(Chart *chart,
                       const char *path,
@@ -141,4 +142,31 @@ void chart_free(Chart *chart)
 
     // free the chart
     free(chart);
+}
+
+void chart_add_tempo(Chart *chart, double bpm, uint16_t subbeat)
+{
+    // create the tempo
+    Tempo tempo = (Tempo)
+    {
+        .bpm = bpm,
+        .time = 0,
+        .subbeat = subbeat,
+    };
+
+    // if there any any tempos before the current tempo
+    if (chart->num_tempos > 0)
+    {
+        // a tempo time cannot be calculated without a previous tempo to relatively time against
+        // calculate the duration of the tempo
+        Tempo *previous_tempo = &chart->tempos[chart->num_tempos - 1];
+        double duration = subbeats_at_tempo_to_duration(previous_tempo, tempo.subbeat - previous_tempo->subbeat);
+
+        // set the tempos time to the duration offset by the previous tempos time
+        tempo.time = previous_tempo->time + duration;
+    }
+
+    // append the tempo to the given charts tempos
+    chart->tempos[chart->num_tempos] = tempo;
+    chart->num_tempos++;
 }
