@@ -230,11 +230,11 @@ void parse_measure(Chart *chart,
             float denominator = beat->denominator;
 
             // calculate the beat and subbeat
-            float subbeat_per_measure = CHART_BEAT_MAX_SUBBEATS * 4 / denominator * numerator;
+            float subbeat_per_measure = CHART_BEAT_SUBBEATS * 4 / denominator * numerator;
             float subbeat_per_line = subbeat_per_measure / (float)state->num_measure_notes;
             float current_line_subbeat = subbeat_per_line * (float)n;
-            last_beat = floor(current_line_subbeat / (CHART_BEAT_MAX_SUBBEATS * 4 / denominator));
-            last_subbeat = fmod(current_line_subbeat, CHART_BEAT_MAX_SUBBEATS * 4 / denominator);
+            last_beat = floor(current_line_subbeat / (CHART_BEAT_SUBBEATS * 4 / denominator));
+            last_subbeat = fmod(current_line_subbeat, CHART_BEAT_SUBBEATS * 4 / denominator);
 
             // parse the notes of the current line
             parse_notes(chart,

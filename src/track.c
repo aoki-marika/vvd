@@ -15,7 +15,7 @@
 
 float position_by_subbeat(int subbeat, double speed)
 {
-    return (float)subbeat / CHART_BEAT_MAX_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
+    return (float)subbeat / CHART_BEAT_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
 }
 
 void load_notes_mesh(Mesh *mesh,
@@ -81,8 +81,8 @@ void reload_meshes(Track *track)
             beat_index++;
 
         // get the start and end position of this measure, as if it was in 4/4 time
-        float start_position = position_by_subbeat((i - 1) * 4 * CHART_BEAT_MAX_SUBBEATS, track->speed);
-        float end_position = position_by_subbeat(i * 4 * CHART_BEAT_MAX_SUBBEATS, track->speed);
+        float start_position = position_by_subbeat((i - 1) * 4 * CHART_BEAT_SUBBEATS, track->speed);
+        float end_position = position_by_subbeat(i * 4 * CHART_BEAT_SUBBEATS, track->speed);
 
         // get the size of the current measure as if it was 4/4 time by getting the difference between the start and end
         // then multiply by numerator/denominator to get the final size of the measure

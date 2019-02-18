@@ -21,9 +21,8 @@
 #define CHART_FX_LANE_L 0
 #define CHART_FX_LANE_R 1
 
-// max number of subbeats per beat
-// todo: not sure this is the proper term for this
-#define CHART_BEAT_MAX_SUBBEATS 48
+// the number of subbeats per beat
+#define CHART_BEAT_SUBBEATS 48
 
 typedef struct
 {
