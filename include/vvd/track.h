@@ -52,15 +52,8 @@ typedef struct
     Mesh *fx_notes_mesh;
 
     // the times, in ms, of each tempo in chart->tempos
+    // todo: calculate at chart parse time
     double *tempo_times;
-
-    // the subbeat of each tempo in chart->tempos
-    // todo: removeme...?
-    int *tempo_subbeats;
-
-    // the subbeat this tracks chart ends on
-    // todo: removeme...?
-    int end_subbeat;
 
     // the index of the current tempo this track is at
     int tempo_index;

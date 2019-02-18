@@ -31,10 +31,12 @@ typedef struct
     uint8_t numerator;
     uint8_t denominator;
 
-    // the measure, beat, and subbeat that this beat starts at
+    // the measure this beat starts at
     uint16_t measure;
-    uint8_t beat;
-    uint8_t subbeat;
+
+    // the subbeat this beat starts at
+    // note: not relative to measure
+    uint16_t subbeat;
 } Beat;
 
 typedef struct
@@ -42,27 +44,21 @@ typedef struct
     // the beats per minute of this tempo
     float bpm;
 
-    // the measure, beat, and subbeat that this tempo starts at
-    uint16_t measure;
-    uint8_t beat;
-    uint8_t subbeat;
+    // the subbeat this tempo starts at
+    uint16_t subbeat;
 } Tempo;
 
 typedef struct
 {
-    // the measure, beat, and subbeat this note starts at
-    uint16_t start_measure;
-    uint8_t start_beat;
-    uint8_t start_subbeat;
+    // the subbeat this note starts at
+    uint16_t start_subbeat;
 
     // whether or not this note is a hold note
     bool hold;
 
-    // the measure, beat, and subbeat this note ends at
+    // the subbeat this note ends at
     // only applicable to hold notes
-    uint16_t end_measure;
-    uint8_t end_beat;
-    uint8_t end_subbeat;
+    uint16_t end_subbeat;
 } Note;
 
 typedef struct
@@ -95,10 +91,11 @@ typedef struct
     int num_fx_notes[CHART_FX_LANES];
     Note *fx_notes[CHART_FX_LANES];
 
-    // the end measure, beat, and subbeat this chart ends at
-    uint16_t end_measure;
-    uint8_t end_beat;
-    uint8_t end_subbeat;
+    // the subbeat this chart ends at
+    uint16_t end_subbeat;
+
+    // the total number of measures in this chart
+    uint16_t num_measures;
 } Chart;
 
 Chart *chart_create(const char *path);

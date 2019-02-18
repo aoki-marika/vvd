@@ -12,51 +12,6 @@
 // could maybe get time measure by caching the length of the chart (combine all bpm durations?)
 // then divide that by time to get % and do something to convert that to measure using measure size
 
-int note_to_subbeat_end(uint16_t measure, uint8_t beat, uint8_t subbeat, Beat *current_beat)
-{
-    // return the amount of subbeats between the given beat and note
-    return ((measure - current_beat->measure) * current_beat->numerator + beat) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator) + subbeat;
-}
-
-int note_to_subbeat(Chart *chart, uint16_t measure, uint8_t beat, uint8_t subbeat)
-{
-    int total_subbeats = 0;
-
-    // for each beat
-    for (int i = 0; i < chart->num_beats; i++)
-    {
-        // get the current beat
-        Beat *current_beat = &chart->beats[i];
-
-        // if this is the last beat
-        if (i == chart->num_beats - 1)
-        {
-            total_subbeats += note_to_subbeat_end(measure, beat, subbeat, current_beat);
-        }
-        // if this is not the last beat
-        else
-        {
-            // get the next beat
-            Beat *next_beat = &chart->beats[i + 1];
-
-            // if the next beat applies to the given measure
-            if (measure >= next_beat->measure)
-            {
-                // append the amount of subbeats between the current and next beats to total_subbeats
-                total_subbeats += ((next_beat->measure - current_beat->measure) * current_beat->numerator) * (CHART_BEAT_MAX_SUBBEATS * 4 / current_beat->denominator);
-            }
-            // if the next beat doesnt apply to the given measure
-            else
-            {
-                total_subbeats += note_to_subbeat_end(measure, beat, subbeat, current_beat);
-                break;
-            }
-        }
-    }
-
-    return total_subbeats;
-}
-
 float position_by_subbeat(int subbeat, double speed)
 {
     return (float)subbeat / CHART_BEAT_MAX_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
@@ -77,16 +32,10 @@ void load_notes_mesh(Mesh *mesh,
         {
             Note *note = &notes[l][n];
 
-            // get the subbeat the note starts on
-            int start_subbeat = note_to_subbeat(chart,
-                                                note->start_measure,
-                                                note->start_beat,
-                                                note->start_subbeat);
-
-            // calculate the position of the note
+            // calculate the start position of the note
             int lane = abs(l - (num_lanes - 1)); //lanes are rendered mirrored for some reason
             vec3_t position = vec3((lane * width) - (track_size.x / 2),
-                                   position_by_subbeat(start_subbeat, speed),
+                                   position_by_subbeat(note->start_subbeat, speed),
                                    0);
 
             // calculate the size of the note
@@ -94,17 +43,9 @@ void load_notes_mesh(Mesh *mesh,
                                TRACK_CHIP_HEIGHT,
                                0);
 
+            // resize hold notes to their proper size
             if (note->hold)
-            {
-                // get the length of the hold in subbeats
-                int length_subbeats = note_to_subbeat(chart,
-                                                      note->end_measure,
-                                                      note->end_beat,
-                                                      note->end_subbeat);
-
-                // resize the note
-                size.y = position_by_subbeat(length_subbeats, speed) - position.y;
-            }
+                size.y = position_by_subbeat(note->end_subbeat, speed) - position.y;
 
             // add the note to the mesh
             mesh_set_vertices_quad_pos(mesh,
@@ -124,7 +65,7 @@ void reload_meshes(Track *track)
     int beat_index = 0;
     vec3_t measure_position = vec3(-track_size.x / 2, 0, 0);
 
-    for (uint16_t i = 0; i < track->chart->end_measure + 1; i++)
+    for (uint16_t i = 0; i < track->chart->num_measures; i++)
     {
         // create the measure bar for the current measure
         mesh_set_vertices_quad_pos(track->measure_bars_mesh,
@@ -139,12 +80,12 @@ void reload_meshes(Track *track)
             beat_index++;
 
         // get the start and end position of this measure, as if it was in 4/4 time
-        Beat *beat = &track->chart->beats[beat_index];
         float start_position = position_by_subbeat((i - 1) * 4 * CHART_BEAT_MAX_SUBBEATS, track->speed);
         float end_position = position_by_subbeat(i * 4 * CHART_BEAT_MAX_SUBBEATS, track->speed);
 
         // get the size of the current measure as if it was 4/4 time by getting the difference between the start and end
         // then multiply by numerator/denominator to get the final size of the measure
+        Beat *beat = &track->chart->beats[beat_index];
         float measure_size = (end_position - start_position) * ((float)beat->numerator / (float)beat->denominator);
 
         // increment measure_position.y for the next measure
@@ -179,25 +120,19 @@ double time_for_subbeat_at_tempo(int subbeat, Tempo *tempo)
 
 void cache_tempo_times(Track *track)
 {
-    for (int i = 0; i < track->chart->num_tempos; i++)
-    {
-        Tempo *tempo = &track->chart->tempos[i];
-        track->tempo_subbeats[i] = note_to_subbeat(track->chart, tempo->measure, tempo->beat, tempo->subbeat);
-    }
-
     double total_duration = 0;
 
     for (int i = 0; i < track->chart->num_tempos; i++)
     {
         track->tempo_times[i] = total_duration;
 
-        int subbeat = track->tempo_subbeats[i];
+        int subbeat = track->chart->tempos[i].subbeat;
         int next_subbeat;
 
         if (i + 1 < track->chart->num_tempos)
-            next_subbeat = track->tempo_subbeats[i + 1];
+            next_subbeat = track->chart->tempos[i + 1].subbeat;
         else
-            next_subbeat = track->end_subbeat;
+            next_subbeat = track->chart->end_subbeat;
 
         Tempo *tempo = &track->chart->tempos[i];
         double duration = time_for_subbeat_at_tempo(next_subbeat - subbeat, tempo);
@@ -216,8 +151,6 @@ Track *track_create(Chart *chart)
     // set the track properties
     track->chart = chart;
     track->tempo_times = malloc(CHART_EVENTS_MAX * sizeof(double));
-    track->tempo_subbeats = malloc(CHART_EVENTS_MAX * sizeof(double));
-    track->end_subbeat = note_to_subbeat(track->chart, track->chart->end_measure, track->chart->end_beat, track->chart->end_subbeat);
     track->tempo_index = 0;
     track->speed = 0;
 
@@ -261,7 +194,6 @@ void track_free(Track *track)
 
     // free all the allocated properties
     free(track->tempo_times);
-    free(track->tempo_subbeats);
 
     // free the track
     free(track);
@@ -327,7 +259,7 @@ void track_draw(Track *track, double time, double speed)
         end_time = track->tempo_times[track->tempo_index + 1];
     else
     {
-        double duration = time_for_subbeat_at_tempo(track->end_subbeat - track->tempo_subbeats[track->tempo_index], tempo);
+        double duration = time_for_subbeat_at_tempo(track->chart->end_subbeat - track->chart->tempos[track->tempo_index].subbeat, tempo);
         end_time = start_time + duration;
     }
 
@@ -335,15 +267,15 @@ void track_draw(Track *track, double time, double speed)
     float percent = (time - start_time) / (end_time - start_time);
 
     // get the current tempo position
-    int start_subbeat = track->tempo_subbeats[track->tempo_index];
+    int start_subbeat = track->chart->tempos[track->tempo_index].subbeat;
     float start_position = position_by_subbeat(start_subbeat, speed);
 
     // get the next tempo position
     int end_subbeat;
     if (track->tempo_index + 1 < track->chart->num_tempos)
-        end_subbeat = track->tempo_subbeats[track->tempo_index + 1];
+        end_subbeat = track->chart->tempos[track->tempo_index + 1].subbeat;
     else
-        end_subbeat = track->end_subbeat;
+        end_subbeat = track->chart->end_subbeat;
 
     float end_position_offset = position_by_subbeat(end_subbeat - start_subbeat, speed);
 

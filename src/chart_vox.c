@@ -5,6 +5,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include "note_utils.h"
+
 void *chart_vox_parsing_state_create()
 {
     // create the parsing state
@@ -126,49 +128,6 @@ void parse_timing(char *value, uint16_t *measure, uint8_t *beat, uint8_t *subbea
     *subbeat = atoi(strtok(NULL, ","));
 }
 
-void parse_note(Chart *chart,
-                int *num_notes,
-                Note *notes,
-                uint8_t length,
-                uint16_t measure,
-                uint8_t beat,
-                uint8_t subbeat)
-{
-    // create the note
-    Note note = (Note)
-    {
-        .start_measure = measure,
-        .start_beat = beat,
-        .start_subbeat = subbeat,
-    };
-
-    // set the hold values if this note is a hold note
-    if (length > 0)
-    {
-        // get the current number of beats per measure
-        uint8_t num_measure_beats = chart->beats[chart->num_beats - 1].numerator;
-
-        // calculate length in measures, beats, and subbeats
-        uint8_t length_beats = length / CHART_BEAT_MAX_SUBBEATS;
-        uint16_t length_measures = length_beats / num_measure_beats;
-        uint8_t length_subbeats = length;
-
-        length_beats -= length_measures * num_measure_beats;
-        length_subbeats -= length_measures * num_measure_beats * CHART_BEAT_MAX_SUBBEATS;
-        length_subbeats -= length_beats * CHART_BEAT_MAX_SUBBEATS;
-
-        // calculate and set the end timing properties
-        note.hold = true;
-        note.end_measure = note.start_measure + length_measures;
-        note.end_beat = note.start_beat + length_beats;
-        note.end_subbeat = note.start_subbeat + length_subbeats;
-    }
-
-    // append the note to the charts notes
-    notes[*num_notes] = note;
-    *num_notes += 1;
-}
-
 void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
 {
     // get the values for the line, as most sections use them
@@ -198,9 +157,8 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                 assert(num_values == 1);
 
                 // set the charts end timing
-                chart->end_measure = measure;
-                chart->end_beat = beat;
-                chart->end_subbeat = subbeat;
+                chart->num_measures = measure + 1;
+                chart->end_subbeat = note_time_to_subbeat(chart, measure, beat, subbeat);
 
                 break;
             }
@@ -215,9 +173,17 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                     .numerator = atoi(values[1]),
                     .denominator = atoi(values[2]),
                     .measure = measure,
-                    .beat = beat,
                     .subbeat = subbeat,
                 };
+
+                // if there are any beats before the current beat
+                if (chart->num_beats > 0)
+                {
+                    // set the beats subbeat
+                    // a subbeat cant be calculated without a beat already existing
+                    Beat *note_beat = &chart->beats[chart->num_beats - 1];
+                    chart_beat.subbeat = note_time_at_beat_to_subbeat(note_beat, measure, beat, subbeat);
+                }
 
                 // append the beat to the charts beats
                 chart->beats[chart->num_beats] = chart_beat;
@@ -236,9 +202,7 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                 Tempo tempo = (Tempo)
                 {
                     .bpm = atof(values[1]),
-                    .measure = measure,
-                    .beat = beat,
-                    .subbeat = subbeat,
+                    .subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
                 };
 
                 // append the tempo to the charts tempos
@@ -295,14 +259,23 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                         break;
                 }
 
-                // parse the note
-                parse_note(chart,
-                           num_notes,
-                           notes,
-                           atoi(values[1]),
-                           measure,
-                           beat,
-                           subbeat);
+                // create the note
+                Note note = (Note)
+                {
+                    .start_subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
+                };
+
+                // set the hold properties if this note is a hold
+                int length = atoi(values[1]);
+                if (length > 0)
+                {
+                    note.hold = true;
+                    note.end_subbeat = note.start_subbeat + length;
+                }
+
+                // append the note to the charts notes
+                notes[*num_notes] = note;
+                *num_notes += 1;
 
                 break;
             }
