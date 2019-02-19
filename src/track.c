@@ -10,8 +10,7 @@
 #include "screen.h"
 #include "note_utils.h"
 
-// todo: -> subbeat_to_position
-float position_by_subbeat(double subbeat, double speed)
+float subbeat_position(double subbeat, double speed)
 {
     return subbeat / CHART_BEAT_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
 }
@@ -34,7 +33,7 @@ void load_notes_mesh(Mesh *mesh,
             // calculate the start position of the note
             int lane = abs(l - (num_lanes - 1)); //lanes are rendered mirrored for some reason
             vec3_t position = vec3((lane * width) - (track_size.x / 2),
-                                   position_by_subbeat(note->start_subbeat, speed),
+                                   subbeat_position(note->start_subbeat, speed),
                                    0);
 
             // calculate the size of the note
@@ -44,7 +43,7 @@ void load_notes_mesh(Mesh *mesh,
 
             // resize hold notes to their proper size
             if (note->hold)
-                size.y = position_by_subbeat(note->end_subbeat, speed) - position.y;
+                size.y = subbeat_position(note->end_subbeat, speed) - position.y;
 
             // add the note to the mesh
             mesh_set_vertices_quad_pos(mesh,
@@ -79,8 +78,8 @@ void reload_meshes(Track *track)
             beat_index++;
 
         // get the start and end position of this measure, as if it was in 4/4 time
-        float start_position = position_by_subbeat((i - 1) * 4 * CHART_BEAT_SUBBEATS, track->speed);
-        float end_position = position_by_subbeat(i * 4 * CHART_BEAT_SUBBEATS, track->speed);
+        float start_position = subbeat_position((i - 1) * 4 * CHART_BEAT_SUBBEATS, track->speed);
+        float end_position = subbeat_position(i * 4 * CHART_BEAT_SUBBEATS, track->speed);
 
         // get the size of the current measure as if it was 4/4 time by getting the difference between the start and end
         // then multiply by numerator/denominator to get the final size of the measure
@@ -217,7 +216,7 @@ void track_draw(Track *track, double time, double speed)
 
     // scroll the bars and notes
     // subtract track_length so 0 scroll is at the start of the track, not the middle
-    model = m4_mul(model, m4_translation(vec3(0, -position_by_subbeat(time_subbeat, speed) - TRACK_LENGTH, 0)));
+    model = m4_mul(model, m4_translation(vec3(0, -subbeat_position(time_subbeat, speed) - TRACK_LENGTH, 0)));
 
     // draw the bars and notes above the track
     // todo: theres probably a better way to do this
