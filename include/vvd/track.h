@@ -61,5 +61,8 @@ typedef struct
 Track *track_create(Chart *chart);
 void track_free(Track *track);
 
-// draw the given tracks state at the given time (ms from the beginning of the track) and hi-speed
-void track_draw(Track *track, double time, double speed);
+// set the given tracks scroll speed
+void track_set_speed(Track *track, double speed);
+
+// draw the given tracks state at the given time in milliseconds
+void track_draw(Track *track, double time);

@@ -122,7 +122,7 @@ Track *track_create(Chart *chart)
     // set the track properties
     track->chart = chart;
     track->tempo_index = 0;
-    track->speed = 0;
+    track->speed = 1.0;
 
     // create the lane program and mesh
     track->lane_program = program_create("lane.vs", "lane.fs", true);
@@ -163,23 +163,20 @@ void track_free(Track *track)
     free(track);
 }
 
-void track_draw(Track *track, double time, double speed)
+void track_set_speed(Track *track, double speed)
 {
-    // update the track speed and tempo
-    bool reload = false;
+    track->speed = speed;
 
-    if (track->speed != speed)
-    {
-        track->speed = speed;
+    // reload the track meshes when speed changes
+    // todo: this is not an acceptable solution, but works for testing
+    // reloading everything on speed change is much too costly
+    // loading should be buffered, in that it only loads x measures that are visible then deletes/loads new ones on scroll
+    // then these reload events only have to reload a small portion of the measures and new ones will be created with the params
+    reload_meshes(track);
+}
 
-        // reload the track meshes when speed changes
-        // todo: this is not an acceptable solution, but works for testing
-        // reloading everything on speed change is much too costly
-        // loading should be buffered, in that it only loads x measures that are visible then deletes/loads new ones on scroll
-        // then these reload events only have to reload a small portion of the measures and new ones will be created with the params
-        reload_meshes(track);
-    }
-
+void track_draw(Track *track, double time)
+{
     // update the current tempo
     for (int i = 0; i < track->chart->num_tempos; i++)
     {
@@ -216,7 +213,7 @@ void track_draw(Track *track, double time, double speed)
 
     // scroll the bars and notes
     // subtract track_length so 0 scroll is at the start of the track, not the middle
-    model = m4_mul(model, m4_translation(vec3(0, -subbeat_position(time_subbeat, speed) - TRACK_LENGTH, 0)));
+    model = m4_mul(model, m4_translation(vec3(0, -subbeat_position(time_subbeat, track->speed) - TRACK_LENGTH, 0)));
 
     // draw the bars and notes above the track
     // todo: theres probably a better way to do this
