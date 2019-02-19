@@ -12,3 +12,6 @@ uint16_t note_time_to_subbeat(Chart *chart, uint16_t measure, uint8_t beat, uint
 
 // calculate the duration in milliseconds of a given number of subbeats at the given tempo
 double subbeats_at_tempo_to_duration(Tempo *tempo, uint16_t subbeats);
+
+// calculate the subbeat of a given time in milliseconds at the tempo in the given charts tempos at tempo_index
+double time_to_subbeat(Chart *chart, int tempo_index, double time);

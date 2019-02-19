@@ -198,6 +198,10 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                 // timing, bpm, direction
                 // not entirely sure how direction works but its typically 4, and for the twotorial stops its -4
                 // todo: booth vox dont have timing for bpm
+                // e.g.
+                // #BPM
+                // 177.0000
+                // #END
                 assert(num_values == 3);
 
                 // add the tempo to the given chart

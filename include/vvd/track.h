@@ -51,7 +51,7 @@ typedef struct
     Program *fx_notes_program;
     Mesh *fx_notes_mesh;
 
-    // the index of the current tempo this track is at
+    // the index of the current tempo this track is scrolling at
     int tempo_index;
 
     // the current speed this track is scrolling at

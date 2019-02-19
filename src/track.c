@@ -10,12 +10,10 @@
 #include "screen.h"
 #include "note_utils.h"
 
-// could maybe get time measure by caching the length of the chart (combine all bpm durations?)
-// then divide that by time to get % and do something to convert that to measure using measure size
-
-float position_by_subbeat(int subbeat, double speed)
+// todo: -> subbeat_to_position
+float position_by_subbeat(double subbeat, double speed)
 {
-    return (float)subbeat / CHART_BEAT_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
+    return subbeat / CHART_BEAT_SUBBEATS * speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
 }
 
 void load_notes_mesh(Mesh *mesh,
@@ -192,6 +190,9 @@ void track_draw(Track *track, double time, double speed)
         track->tempo_index = i;
     }
 
+    // calculate the subbeat of time
+    double time_subbeat = time_to_subbeat(track->chart, track->tempo_index, time);
+
     // create the projection matrix
     mat4_t projection = m4_perspective(90.0f,
                                        (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT,
@@ -215,42 +216,8 @@ void track_draw(Track *track, double time, double speed)
     mesh_draw(track->lane_mesh);
 
     // scroll the bars and notes
-
-    // get the tempo and start time
-    Tempo *tempo = &track->chart->tempos[track->tempo_index];
-    double start_time = track->chart->tempos[track->tempo_index].time;
-
-    // get the end time
-    double end_time;
-    if (track->tempo_index + 1 < track->chart->num_tempos)
-        end_time = track->chart->tempos[track->tempo_index + 1].time;
-    else
-    {
-        double duration = subbeats_at_tempo_to_duration(tempo, track->chart->end_subbeat - track->chart->tempos[track->tempo_index].subbeat);
-        end_time = start_time + duration;
-    }
-
-    // calculate the percentage of the current tempo the track should be scrolled to
-    float percent = (time - start_time) / (end_time - start_time);
-
-    // get the current tempo position
-    int start_subbeat = track->chart->tempos[track->tempo_index].subbeat;
-    float start_position = position_by_subbeat(start_subbeat, speed);
-
-    // get the next tempo position
-    int end_subbeat;
-    if (track->tempo_index + 1 < track->chart->num_tempos)
-        end_subbeat = track->chart->tempos[track->tempo_index + 1].subbeat;
-    else
-        end_subbeat = track->chart->end_subbeat;
-
-    float end_position_offset = position_by_subbeat(end_subbeat - start_subbeat, speed);
-
-    // scroll the chart
-    float scroll = -(start_position + (end_position_offset * percent));
-
     // subtract track_length so 0 scroll is at the start of the track, not the middle
-    model = m4_mul(model, m4_translation(vec3(0, scroll - TRACK_LENGTH, 0)));
+    model = m4_mul(model, m4_translation(vec3(0, -position_by_subbeat(time_subbeat, speed) - TRACK_LENGTH, 0)));
 
     // draw the bars and notes above the track
     // todo: theres probably a better way to do this
