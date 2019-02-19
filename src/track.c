@@ -126,20 +126,20 @@ Track *track_create(Chart *chart)
 
     // create the lane program and mesh
     track->lane_program = program_create("lane.vs", "lane.fs", true);
-    track->lane_mesh = mesh_create(MESH_VERTICES_QUAD, track->lane_program);
+    track->lane_mesh = mesh_create(MESH_VERTICES_QUAD, track->lane_program, GL_STATIC_DRAW);
     mesh_set_vertices_quad(track->lane_mesh, 0, TRACK_WIDTH, TRACK_LENGTH);
 
     // create the measure bars program and mesh
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
-    track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * TRACK_MEASURE_BARS_MAX, track->measure_bars_program);
+    track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * TRACK_MEASURE_BARS_MAX, track->measure_bars_program, GL_DYNAMIC_DRAW);
 
     // create the bt notes program and mesh
     track->bt_notes_program = program_create("bt_note.vs", "bt_note.fs", true);
-    track->bt_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_BT_LANES * CHART_NOTES_MAX, track->bt_notes_program);
+    track->bt_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_BT_LANES * CHART_NOTES_MAX, track->bt_notes_program, GL_DYNAMIC_DRAW);
 
     // create the fx notes program and mesh
     track->fx_notes_program = program_create("fx_note.vs", "fx_note.fs", true);
-    track->fx_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_FX_LANES * CHART_NOTES_MAX, track->fx_notes_program);
+    track->fx_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_FX_LANES * CHART_NOTES_MAX, track->fx_notes_program, GL_DYNAMIC_DRAW);
 
     // return the track
     return track;

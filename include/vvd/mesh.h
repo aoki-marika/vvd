@@ -19,9 +19,9 @@ typedef struct
     GLuint attribute_vertex_position_id;
 } Mesh;
 
-// create a new mesh with the given number of vertices using the given program for its geometry and material
+// create a new mesh of the given type with the given number of vertices using the given program for its geometry and material
 // the given programs vertex shader must have a vec3 vertexPosition attribute
-Mesh *mesh_create(int num_vertices, Program *program);
+Mesh *mesh_create(int num_vertices, Program *program, GLenum usage);
 void mesh_free(Mesh *mesh);
 
 // set the given meshes vertices to the given vertices, offset by the given vertice index

@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-Mesh *mesh_create(int num_vertices, Program *program)
+Mesh *mesh_create(int num_vertices, Program *program, GLenum usage)
 {
     // create the mesh
     Mesh *mesh = malloc(sizeof(Mesh));
@@ -18,7 +18,7 @@ Mesh *mesh_create(int num_vertices, Program *program)
 
     // allocate the vertex buffer data
     glBindBuffer(GL_ARRAY_BUFFER, mesh->vertex_buffer_id);
-    glBufferData(GL_ARRAY_BUFFER, num_vertices * 3 * sizeof(float), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, num_vertices * 3 * sizeof(float), NULL, usage);
 
     // return the mesh
     return mesh;
