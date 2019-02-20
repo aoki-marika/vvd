@@ -11,6 +11,12 @@
 #define TRACK_WIDTH 1.0f
 #define TRACK_LENGTH 10.0f
 
+// the number of beats in a single buffer chunk
+#define TRACK_BUFFER_CHUNK_BEATS 4
+
+// the number of extra buffer chunks that are loaded before and after the current buffer chunks
+#define TRACK_EXTRA_BUFFER_CHUNKS 2
+
 // the visual offset, on the y axis, of the track
 // this is used so the track is higher up on the screen
 #define TRACK_VISUAL_OFFSET -7.0f
@@ -32,6 +38,15 @@
 
 typedef struct
 {
+    // the offset of the vertices to draw in the mesh
+    int offset;
+
+    // the size of the vertices to draw in the mesh
+    size_t size;
+} TrackLaneVertices;
+
+typedef struct
+{
     // the chart this track is displaying
     Chart *chart;
 
@@ -46,16 +61,24 @@ typedef struct
     // the bt notes program and mesh
     Program *bt_notes_program;
     Mesh *bt_notes_mesh;
+    TrackLaneVertices *bt_lanes_vertices[CHART_BT_LANES];
 
     // the fx notes program and mesh
     Program *fx_notes_program;
     Mesh *fx_notes_mesh;
+    TrackLaneVertices *fx_lanes_vertices[CHART_FX_LANES];
+
+    // the current time this track is scrolled to, in milliseconds
+    double time;
 
     // the index of the current tempo this track is scrolling at
     int tempo_index;
 
     // the current speed this track is scrolling at
     double speed;
+
+    // the current buffer chunk this track is scrolled to
+    int buffer_position;
 } Track;
 
 Track *track_create(Chart *chart);
