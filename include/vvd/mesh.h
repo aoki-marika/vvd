@@ -35,11 +35,11 @@ void mesh_free(Mesh *mesh);
 // vertices_size should be sizeof(vertices)
 void mesh_set_vertices(Mesh *mesh, int index, const GLfloat *vertices, size_t vertices_size);
 
-// a helper method for calling mesh_set_vertices with a quad generated from the given width and height
-void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height);
-
 // a helper method for calling mesh_set_vertices with a quad generated from the given width and height and position
-void mesh_set_vertices_quad_pos(Mesh *mesh, int index, GLfloat width, GLfloat height, vec3_t position);
+// origin point is bottom-left
+// -x = left, +x = right
+// -y = down, +y = up
+void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height, vec3_t position);
 
 // draw the given meshes vertices starting at the given vertex index and of the given size
 void mesh_draw(Mesh *mesh, int index, size_t size);

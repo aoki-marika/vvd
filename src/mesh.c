@@ -37,40 +37,23 @@ void mesh_set_vertices(Mesh *mesh, int index, const GLfloat *vertices, size_t ve
     glBufferSubData(GL_ARRAY_BUFFER, index * MESH_VERTEX_VALUES * sizeof(float), vertices_size, vertices);
 }
 
-void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height)
-{
-    // generate the quad
-    const GLfloat vertices[] =
-    {
-        -width,  height,  0.0f, //top left
-         width,  height,  0.0f, //top right
-         width, -height,  0.0f, //bottom right
-
-         width, -height,  0.0f, //bottom right
-        -width, -height,  0.0f, //bottom left
-        -width,  height,  0.0f, //top left
-    };
-
-    // set the mesh vertices
-    mesh_set_vertices(mesh, index, vertices, sizeof(vertices));
-}
-
-void mesh_set_vertices_quad_pos(Mesh *mesh, int index, GLfloat width, GLfloat height, vec3_t position)
+void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height, vec3_t position)
 {
     // calculate the vertice positions
     mat4_t model = m4_identity();
-    vec3_t model_position = m4_mul_pos(model, position);
+    vec3_t start_position = m4_mul_pos(model, vec3(-position.x, position.y, position.z));
+    vec3_t end_position = m4_mul_pos(model, vec3(-position.x - width, position.y + height, position.z));
 
     // generate the quad
     const GLfloat vertices[] =
     {
-        model_position.x,         model_position.y + height,  0.0f, //top left
-        model_position.x + width, model_position.y + height,  0.0f, //top right
-        model_position.x + width, model_position.y,           0.0f, //bottom right
+        end_position.x,   start_position.y, start_position.z, //top left
+        end_position.x,   end_position.y,   start_position.z, //top right
+        start_position.x, end_position.y,   start_position.z, //bottom right
 
-        model_position.x + width, model_position.y,           0.0f, //bottom right
-        model_position.x,         model_position.y,           0.0f, //bottom left
-        model_position.x,         model_position.y + height,  0.0f, //top left
+        start_position.x, end_position.y,   start_position.z, //bottom right
+        start_position.x, start_position.y, start_position.z, //bottom left
+        end_position.x,   start_position.y, start_position.z, //top left
     };
 
     // set the mesh vertices
