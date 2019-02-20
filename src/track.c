@@ -14,9 +14,6 @@ Track *track_create(Chart *chart)
     // create the track
     Track *track = malloc(sizeof(Track));
 
-    // todo: can malloc the actual size of the arrays instead of max
-    // the chart is already loaded and is not modified at any point during playback
-
     // set the track properties
     track->chart = chart;
     track->tempo_index = 0;
@@ -30,7 +27,7 @@ Track *track_create(Chart *chart)
 
     // create the measure bars program and mesh
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
-    track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * TRACK_MEASURE_BARS_MAX, track->measure_bars_program, GL_DYNAMIC_DRAW);
+    track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * chart->num_measures, track->measure_bars_program, GL_DYNAMIC_DRAW);
 
     // create the bt notes program and mesh
     track->bt_notes_program = program_create("bt_note.vs", "bt_note.fs", true);
