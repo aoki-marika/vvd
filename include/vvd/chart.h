@@ -6,7 +6,7 @@
 // max values
 #define CHART_STR_MAX 1024
 #define CHART_EVENTS_MAX 256
-#define CHART_NOTES_MAX 4096
+#define CHART_NOTES_MAX 1024
 
 // number of lanes per note type
 #define CHART_BT_LANES 4
