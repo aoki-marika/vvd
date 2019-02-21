@@ -29,15 +29,27 @@ Track *track_create(Chart *chart)
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
     track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * chart->num_measures, track->measure_bars_program, GL_DYNAMIC_DRAW);
 
-    // create the bt notes program and mesh
-    track->bt_notes_program = program_create("bt_note.vs", "bt_note.fs", true);
-    track->bt_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_BT_LANES * CHART_NOTES_MAX, track->bt_notes_program, GL_DYNAMIC_DRAW);
+    // create the bt chips and holds programs and meshes
+    track->bt_chips_program = program_create("bt_chip.vs", "bt_chip.fs", true);
+    track->bt_holds_program = program_create("bt_hold.vs", "bt_hold.fs", true);
+
+    size_t bt_mesh_size = MESH_VERTICES_QUAD * CHART_BT_LANES * CHART_NOTES_MAX;
+    track->bt_chips_mesh = mesh_create(bt_mesh_size, track->bt_chips_program, GL_DYNAMIC_DRAW);
+    track->bt_holds_mesh = mesh_create(bt_mesh_size, track->bt_holds_program, GL_DYNAMIC_DRAW);
+
+    // create the bt lanes vertices
     for (int i = 0; i < CHART_BT_LANES; i++)
         track->bt_lanes_vertices[i] = malloc(sizeof(TrackLaneVertices));
 
-    // create the fx notes program and mesh
-    track->fx_notes_program = program_create("fx_note.vs", "fx_note.fs", true);
-    track->fx_notes_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_FX_LANES * CHART_NOTES_MAX, track->fx_notes_program, GL_DYNAMIC_DRAW);
+    // create the fx chips and holds programs and meshes
+    track->fx_chips_program = program_create("fx_chip.vs", "fx_chip.fs", true);
+    track->fx_holds_program = program_create("fx_hold.vs", "fx_hold.fs", true);
+
+    size_t fx_mesh_size = MESH_VERTICES_QUAD * CHART_FX_LANES * CHART_NOTES_MAX;
+    track->fx_chips_mesh = mesh_create(fx_mesh_size, track->fx_chips_program, GL_DYNAMIC_DRAW);
+    track->fx_holds_mesh = mesh_create(fx_mesh_size, track->fx_holds_program, GL_DYNAMIC_DRAW);
+
+    // create the fx lanes vertices
     for (int i = 0; i < CHART_FX_LANES; i++)
         track->fx_lanes_vertices[i] = malloc(sizeof(TrackLaneVertices));
 
@@ -50,14 +62,18 @@ void track_free(Track *track)
     // free all the programs
     program_free(track->lane_program);
     program_free(track->measure_bars_program);
-    program_free(track->bt_notes_program);
-    program_free(track->fx_notes_program);
+    program_free(track->bt_chips_program);
+    program_free(track->bt_holds_program);
+    program_free(track->fx_chips_program);
+    program_free(track->fx_holds_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
     mesh_free(track->measure_bars_mesh);
-    mesh_free(track->bt_notes_mesh);
-    mesh_free(track->fx_notes_mesh);
+    mesh_free(track->bt_chips_mesh);
+    mesh_free(track->bt_holds_mesh);
+    mesh_free(track->fx_chips_mesh);
+    mesh_free(track->fx_holds_mesh);
 
     // free all the allocated properties
     for (int i = 0; i < CHART_BT_LANES; i++)
@@ -119,7 +135,8 @@ void load_measure_bars_mesh(Track *track)
     }
 }
 
-void update_notes_mesh(Mesh *mesh, //the mesh to add note vertices to
+void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
+                       Mesh *holds_mesh, //the mesh to add hold note vertices to
                        uint16_t start_subbeat, //the minimum subbeat for notes to add
                        uint16_t end_subbeat, // the maximum subbeat for notes to add
                        int num_lanes, //the number of lanes for the given notes type
@@ -197,7 +214,7 @@ void update_notes_mesh(Mesh *mesh, //the mesh to add note vertices to
                 size.y = subbeat_position(note->end_subbeat, speed) - position.y;
 
             // add the note vertices to the mesh
-            mesh_set_vertices_quad(mesh,
+            mesh_set_vertices_quad(note->hold ? holds_mesh : chips_mesh,
                                    vertices_index,
                                    size.x, size.y,
                                    position);
@@ -212,7 +229,8 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
     uint16_t end_subbeat = (buffer_position + num_chunks) * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
 
     // update the bt notes
-    update_notes_mesh(track->bt_notes_mesh,
+    update_notes_mesh(track->bt_chips_mesh,
+                      track->bt_holds_mesh,
                       start_subbeat,
                       end_subbeat,
                       CHART_BT_LANES,
@@ -223,7 +241,8 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
                       track->speed);
 
     // load the fx notes
-    update_notes_mesh(track->fx_notes_mesh,
+    update_notes_mesh(track->fx_chips_mesh,
+                      track->fx_holds_mesh,
                       start_subbeat,
                       end_subbeat,
                       CHART_FX_LANES,
@@ -343,16 +362,30 @@ void track_draw(Track *track, double time)
     program_set_matrices(track->measure_bars_program, projection, view, model);
     mesh_draw_all(track->measure_bars_mesh);
 
-    // draw the fx notes
-    draw_lanes(track->fx_notes_program,
-               track->fx_notes_mesh,
+    // draw the fx holds
+    draw_lanes(track->fx_holds_program,
+               track->fx_holds_mesh,
                projection, view, model,
                CHART_FX_LANES,
                track->fx_lanes_vertices);
 
-    // draw the bt notes
-    draw_lanes(track->bt_notes_program,
-               track->bt_notes_mesh,
+    // draw the bt holds
+    draw_lanes(track->bt_holds_program,
+               track->bt_holds_mesh,
+               projection, view, model,
+               CHART_BT_LANES,
+               track->bt_lanes_vertices);
+
+    // draw the fx chips
+    draw_lanes(track->fx_chips_program,
+               track->fx_chips_mesh,
+               projection, view, model,
+               CHART_FX_LANES,
+               track->fx_lanes_vertices);
+
+    // draw the bt chips
+    draw_lanes(track->bt_chips_program,
+               track->bt_chips_mesh,
                projection, view, model,
                CHART_BT_LANES,
                track->bt_lanes_vertices);

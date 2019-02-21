@@ -71,14 +71,14 @@ typedef struct
     Program *measure_bars_program;
     Mesh *measure_bars_mesh;
 
-    // the bt notes program and mesh
-    Program *bt_notes_program;
-    Mesh *bt_notes_mesh;
+    // the bt chips and holds programs and meshes
+    Program *bt_chips_program, *bt_holds_program;
+    Mesh *bt_chips_mesh, *bt_holds_mesh;
     TrackLaneVertices *bt_lanes_vertices[CHART_BT_LANES];
 
-    // the fx notes program and mesh
-    Program *fx_notes_program;
-    Mesh *fx_notes_mesh;
+    // the fx chips and holds programs and meshes
+    Program *fx_chips_program, *fx_holds_program;
+    Mesh *fx_chips_mesh, *fx_holds_mesh;
     TrackLaneVertices *fx_lanes_vertices[CHART_FX_LANES];
 
     // the current time this track is scrolled to, in milliseconds
