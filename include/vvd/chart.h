@@ -7,10 +7,12 @@
 #define CHART_STR_MAX 1024
 #define CHART_EVENTS_MAX 256
 #define CHART_NOTES_MAX 1024
+#define CHART_ANALOG_POINTS_MAX 48
 
 // number of lanes per note type
 #define CHART_BT_LANES 4
 #define CHART_FX_LANES 2
+#define CHART_ANALOG_LANES 2
 
 // index of lane names per note type
 #define CHART_BT_LANE_A 0
@@ -20,6 +22,9 @@
 
 #define CHART_FX_LANE_L 0
 #define CHART_FX_LANE_R 1
+
+#define CHART_ANALOG_LANE_L 0
+#define CHART_ANALOG_LANE_R 1
 
 // the number of subbeats per beat
 #define CHART_BEAT_SUBBEATS 48
@@ -66,6 +71,25 @@ typedef struct
 
 typedef struct
 {
+    // the subbeat this point starts at
+    uint16_t subbeat;
+
+    // the position of this point on the track, from 0 to 1
+    double position;
+
+    // whether or not this point and the previous point join to make a slam
+    bool slam;
+} AnalogPoint;
+
+typedef struct
+{
+    // the points of this analog
+    int num_points;
+    AnalogPoint points[CHART_ANALOG_POINTS_MAX];
+} Analog;
+
+typedef struct
+{
     // metadata about this chart
     char *title;
     char *artist;
@@ -93,6 +117,10 @@ typedef struct
     // the fx notes of this chart
     int num_fx_notes[CHART_FX_LANES];
     Note *fx_notes[CHART_FX_LANES];
+
+    // the analogs of this chart
+    int num_analogs[CHART_ANALOG_LANES];
+    Analog *analogs[CHART_ANALOG_LANES];
 
     // the subbeat this chart ends at
     uint16_t end_subbeat;

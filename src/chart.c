@@ -87,6 +87,12 @@ Chart *chart_create(const char *path)
         chart->fx_notes[i] = malloc(CHART_NOTES_MAX * sizeof(Note));
     }
 
+    for (int i = 0; i < CHART_ANALOG_LANES; i++)
+    {
+        chart->num_analogs[i] = 0;
+        chart->analogs[i] = malloc(CHART_NOTES_MAX * sizeof(Analog));
+    }
+
     // get the proper chart parsing methods for the given path
     const char *path_extension = strrchr(path, '.');
     void *(* parsing_state_create)();
@@ -139,6 +145,9 @@ void chart_free(Chart *chart)
 
     for (int i = 0; i < CHART_FX_LANES; i++)
         free(chart->fx_notes[i]);
+
+    for (int i = 0; i < CHART_ANALOG_LANES; i++)
+        free(chart->analogs[i]);
 
     // free the chart
     free(chart);
