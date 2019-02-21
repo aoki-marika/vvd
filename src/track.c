@@ -318,7 +318,7 @@ void track_draw(Track *track, double time)
     mat4_t projection = m4_perspective(90.0f,
                                        (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT,
                                        0.1f,
-                                       100.0f);
+                                       TRACK_LENGTH + -TRACK_CAMERA_OFFSET);
 
     // create the view matrix
     mat4_t view = m4_look_at(vec3(0, 0, -TRACK_LENGTH + TRACK_CAMERA_OFFSET),
@@ -341,28 +341,22 @@ void track_draw(Track *track, double time)
     double time_subbeat = time_to_subbeat(track->chart, track->tempo_index, time);
     model = m4_mul(model, m4_translation(vec3(0, -subbeat_position(time_subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
 
-    // draw the bars and notes above the track
-    // todo: theres probably a better way to do this
-    model = m4_mul(model, m4_translation(vec3(0, 0, -0.01f)));
-
     // draw the measure bars
     program_use(track->measure_bars_program);
     program_set_matrices(track->measure_bars_program, projection, view, model);
     mesh_draw_all(track->measure_bars_mesh);
 
-    // draw the bt notes
-    model = m4_mul(model, m4_translation(vec3(0, 0, -0.02f)));
-    draw_lanes(track->bt_notes_program,
-               track->bt_notes_mesh,
-               projection, view, model,
-               CHART_BT_LANES,
-               track->bt_lanes_vertices);
-
     // draw the fx notes
-    model = m4_mul(model, m4_translation(vec3(0, 0, 0.01f)));
     draw_lanes(track->fx_notes_program,
                track->fx_notes_mesh,
                projection, view, model,
                CHART_FX_LANES,
                track->fx_lanes_vertices);
+
+    // draw the bt notes
+    draw_lanes(track->bt_notes_program,
+               track->bt_notes_mesh,
+               projection, view, model,
+               CHART_BT_LANES,
+               track->bt_lanes_vertices);
 }
