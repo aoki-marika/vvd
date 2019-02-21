@@ -23,7 +23,7 @@ Track *track_create(Chart *chart)
     // create the lane program and mesh
     track->lane_program = program_create("lane.vs", "lane.fs", true);
     track->lane_mesh = mesh_create(MESH_VERTICES_QUAD, track->lane_program, GL_STATIC_DRAW);
-    mesh_set_vertices_quad(track->lane_mesh, 0, TRACK_WIDTH, TRACK_LENGTH);
+    mesh_set_vertices_quad(track->lane_mesh, 0, TRACK_WIDTH, TRACK_LENGTH, vec3(-TRACK_WIDTH / 2, -TRACK_LENGTH / 2, 0));
 
     // create the measure bars program and mesh
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
@@ -73,7 +73,7 @@ void track_free(Track *track)
 float beat_size(double speed)
 {
     // return the draw size of a beat on the track at the given speed
-    return speed / TRACK_BEAT_SPEED * (TRACK_LENGTH * 2);
+    return speed / TRACK_BEAT_SPEED * TRACK_LENGTH;
 }
 
 float subbeat_position(double subbeat, double speed)
@@ -84,24 +84,21 @@ float subbeat_position(double subbeat, double speed)
 
 void load_measure_bars_mesh(Track *track)
 {
-    // todo: either a macro for this vec3 or a draw multiplier
-    vec3_t track_size = vec3(TRACK_WIDTH * 2, TRACK_LENGTH * 2, 0);
-
     // the index of the current beat in track->chart->beats
     int beat_index = 0;
 
     // the last measures draw position
-    vec3_t measure_position = vec3(-track_size.x / 2, 0, 0);
+    vec3_t measure_position = vec3(-TRACK_WIDTH / 2, 0, 0);
 
     // for each measure
     for (uint16_t i = 0; i < track->chart->num_measures; i++)
     {
         // create the measure bar for the current measure
-        mesh_set_vertices_quad_pos(track->measure_bars_mesh,
-                                   i * MESH_VERTICES_QUAD,
-                                   track_size.x,
-                                   TRACK_BAR_HEIGHT,
-                                   measure_position);
+        mesh_set_vertices_quad(track->measure_bars_mesh,
+                               i * MESH_VERTICES_QUAD,
+                               TRACK_WIDTH,
+                               TRACK_BAR_HEIGHT,
+                               measure_position);
 
         // increment the current beat if the next one is at or before the current measure
         if (beat_index + 1 < track->chart->num_beats &&
@@ -130,7 +127,6 @@ void update_notes_mesh(Mesh *mesh,
                        int num_notes[num_lanes],
                        Note *notes[num_lanes],
                        TrackLaneVertices *lanes_vertices[num_lanes],
-                       vec3_t track_size,
                        float note_width,
                        double speed)
 {
@@ -187,18 +183,14 @@ void update_notes_mesh(Mesh *mesh,
                     break;
             }
 
-            // lanes are rendered mirrored for some reason
-            // todo: why does this happen?
-            int draw_lane = abs(l - (num_lanes - 1));
-
             // calculate the start position of the note
-            vec3_t position = vec3((draw_lane * note_width) - (track_size.x / 2),
+            vec3_t position = vec3((l * note_width) - (TRACK_WIDTH / 2),
                                    subbeat_position(note->start_subbeat, speed),
                                    0);
 
             // calculate the size of the note
             vec3_t size = vec3(note_width,
-                               TRACK_CHIP_HEIGHT * 2,
+                               TRACK_CHIP_HEIGHT,
                                0);
 
             // if this is a hold note then resize it from the start to end positions
@@ -206,10 +198,10 @@ void update_notes_mesh(Mesh *mesh,
                 size.y = subbeat_position(note->end_subbeat, speed) - position.y;
 
             // add the note vertices to the mesh
-            mesh_set_vertices_quad_pos(mesh,
-                                       vertices_index,
-                                       size.x, size.y,
-                                       position);
+            mesh_set_vertices_quad(mesh,
+                                   vertices_index,
+                                   size.x, size.y,
+                                   position);
         }
     }
 }
@@ -220,9 +212,6 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
     uint16_t start_subbeat = buffer_position * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
     uint16_t end_subbeat = (buffer_position + num_chunks) * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
 
-    // todo: see other track_size todo
-    vec3_t track_size = vec3(TRACK_WIDTH * 2, TRACK_LENGTH * 2, 0);
-
     // update the bt notes
     update_notes_mesh(track->bt_notes_mesh,
                       track->chart,
@@ -232,8 +221,7 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
                       track->chart->num_bt_notes,
                       track->chart->bt_notes,
                       track->bt_lanes_vertices,
-                      track_size,
-                      TRACK_BT_WIDTH * 2,
+                      TRACK_BT_WIDTH,
                       track->speed);
 
     // load the fx notes
@@ -245,8 +233,7 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
                       track->chart->num_fx_notes,
                       track->chart->fx_notes,
                       track->fx_lanes_vertices,
-                      track_size,
-                      TRACK_BT_WIDTH * 4,
+                      TRACK_BT_WIDTH * (CHART_BT_LANES / CHART_FX_LANES),
                       track->speed);
 }
 
@@ -271,7 +258,7 @@ void update_chart_meshes_at_time(Track *track, double time, bool force)
         // the number of beats per track size at track->speed
         // divided by beats per chunk to get it in chunks
         // plus buffer * 2 for before and after buffer
-        int num_chunks = ceil(((TRACK_LENGTH * 2) / beat_size(track->speed)) / TRACK_BUFFER_CHUNK_BEATS) + (TRACK_EXTRA_BUFFER_CHUNKS * 2);
+        int num_chunks = ceil((TRACK_LENGTH / beat_size(track->speed)) / TRACK_BUFFER_CHUNK_BEATS) + (TRACK_EXTRA_BUFFER_CHUNKS * 2);
 
         // set the given tracks buffer position
         track->buffer_position = buffer_position;
@@ -342,7 +329,7 @@ void track_draw(Track *track, double time)
 
     // create the model matrix
     mat4_t model = m4_identity();
-    model = m4_mul(model, m4_translation(vec3(0, -TRACK_LENGTH, 0))); //move the track so the end point is at 0,0,0
+    model = m4_mul(model, m4_translation(vec3(0, -TRACK_LENGTH / 2, 0))); //move the track so the end point is at 0,0,0
 
     // draw the lane
     program_use(track->lane_program);
@@ -350,9 +337,9 @@ void track_draw(Track *track, double time)
     mesh_draw_all(track->lane_mesh);
 
     // scroll the bars and notes
-    // subtract track_length so 0 scroll is at the start of the track, not the middle
+    // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0
     double time_subbeat = time_to_subbeat(track->chart, track->tempo_index, time);
-    model = m4_mul(model, m4_translation(vec3(0, -subbeat_position(time_subbeat, track->speed) - TRACK_LENGTH, 0)));
+    model = m4_mul(model, m4_translation(vec3(0, -subbeat_position(time_subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
 
     // draw the bars and notes above the track
     // todo: theres probably a better way to do this
