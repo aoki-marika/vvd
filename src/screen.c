@@ -20,6 +20,13 @@ Screen *screen_get()
     DISPMANX_DISPLAY_HANDLE_T dispman_display;
     DISPMANX_UPDATE_HANDLE_T dispman_update;
 
+    // dispman alpha
+    VC_DISPMANX_ALPHA_T dispman_alpha =
+    {
+        DISPMANX_FLAGS_ALPHA_FIXED_NON_ZERO, //flags
+        255, //opacity
+    };
+
     // rects for screen and output resolution
     VC_RECT_T screen_rect;
     VC_RECT_T display_rect;
@@ -31,9 +38,11 @@ Screen *screen_get()
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
         EGL_ALPHA_SIZE, 8,
-        EGL_DEPTH_SIZE, 16, // needed for depth buffering
+        EGL_DEPTH_SIZE, 16,
         EGL_SURFACE_TYPE,
         EGL_WINDOW_BIT,
+        EGL_SAMPLE_BUFFERS, 1,
+        EGL_SAMPLES, 4, //4x msaa
         EGL_NONE,
     };
 
@@ -99,7 +108,7 @@ Screen *screen_get()
                                               0,
                                               &screen_rect,
                                               DISPMANX_PROTECTION_NONE,
-                                              0,
+                                              &dispman_alpha,
                                               0,
                                               (DISPMANX_TRANSFORM_T)0);
 
