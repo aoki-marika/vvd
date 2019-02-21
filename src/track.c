@@ -119,16 +119,15 @@ void load_measure_bars_mesh(Track *track)
     }
 }
 
-void update_notes_mesh(Mesh *mesh,
-                       Chart *chart,
-                       uint16_t start_subbeat,
-                       uint16_t end_subbeat,
-                       int num_lanes,
-                       int num_notes[num_lanes],
-                       Note *notes[num_lanes],
-                       TrackLaneVertices *lanes_vertices[num_lanes],
-                       float note_width,
-                       double speed)
+void update_notes_mesh(Mesh *mesh, //the mesh to add note vertices to
+                       uint16_t start_subbeat, //the minimum subbeat for notes to add
+                       uint16_t end_subbeat, // the maximum subbeat for notes to add
+                       int num_lanes, //the number of lanes for the given notes type
+                       int num_notes[num_lanes], //the number of notes per lane for the given notes type
+                       Note *notes[num_lanes], //the notes to potentially add
+                       TrackLaneVertices *lanes_vertices[num_lanes], //the lane vertices to update for the given notes type
+                       float note_width, //the width of the given notes type
+                       double speed) // the current scroll speed
 {
     // for each lane
     for (int l = 0; l < num_lanes; l++)
@@ -214,7 +213,6 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
 
     // update the bt notes
     update_notes_mesh(track->bt_notes_mesh,
-                      track->chart,
                       start_subbeat,
                       end_subbeat,
                       CHART_BT_LANES,
@@ -226,7 +224,6 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
 
     // load the fx notes
     update_notes_mesh(track->fx_notes_mesh,
-                      track->chart,
                       start_subbeat,
                       end_subbeat,
                       CHART_FX_LANES,
