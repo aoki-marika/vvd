@@ -25,6 +25,13 @@ typedef enum
     VoxSectionTrackFxR,      //TRACK7
 } VoxSection;
 
+typedef enum
+{
+    VoxAnalogStateContinue = 0,
+    VoxAnalogStateStart = 1,
+    VoxAnalogStateEnd = 2,
+} VoxAnalogState;
+
 typedef struct
 {
     // the current section the parser is in
@@ -32,6 +39,9 @@ typedef struct
 
     // the format version of the parsing vox file
     uint8_t format_version;
+
+    // the currently building analogs for each lane
+    Analog *building_analogs[CHART_ANALOG_LANES];
 } VoxParsingState;
 
 void *chart_vox_parsing_state_create();

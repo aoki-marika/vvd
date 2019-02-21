@@ -15,6 +15,10 @@ void *chart_vox_parsing_state_create()
     // set the default section to none
     state->section = VoxSectionNone;
 
+    // default the building analogs to null
+    for (int i = 0; i < CHART_ANALOG_LANES; i++)
+        state->building_analogs[i] = NULL;
+
     // return the state
     return state;
 }
@@ -197,6 +201,7 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
             {
                 // timing, bpm, direction
                 // not entirely sure how direction works but its typically 4, and for the twotorial stops its -4
+                // twotorial stops sort of work in that the start and notes after are timed correctly but sdvx seems to just skip to the end and wait if its a stop
                 // todo: booth vox dont have timing for bpm
                 // e.g.
                 // #BPM
@@ -212,7 +217,92 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
             case VoxSectionTrackAnalogL:
             case VoxSectionTrackAnalogR:
             {
-                // todo: analog
+                // timing, position, state, spin, effect, wide
+                // position: 0 - 127
+                // state: 0 = continue, 1 = start, 2 = end
+                // spin:
+                //  - sweeps are where the track starts spinning but then swings back
+                //  - 1 = not sweep, 1 measure long
+                //  - 2 = not sweep, 1/4 measure long
+                //  - 3 = not sweep, 1/2 measure long
+                //  - 4 = sweep, 1 measure long
+                //  - 5 = sweep, 1/2 measure long
+                //  - 6 = sweep, 1/4 measure long
+                //  - 7 = sweep, 1/8 measure long
+                // effect: laser effect number?
+                // wide: 1 = normal, 2 = wide (maybe just a multiplier for position?)
+                // slams are parsed by two points being on the same subbeat
+                assert(num_values == 6);
+
+                // get this points state
+                int point_state = atoi(values[2]);
+
+                // some vox have invalid point states, ignore those
+                if (point_state != VoxAnalogStateContinue &&
+                    point_state != VoxAnalogStateStart &&
+                    point_state != VoxAnalogStateEnd)
+                    return;
+
+                // get the respective lane for the current section
+                int lane;
+                switch (state->section)
+                {
+                    case VoxSectionTrackAnalogL:
+                        lane = CHART_ANALOG_LANE_L;
+                        break;
+                    case VoxSectionTrackAnalogR:
+                        lane = CHART_ANALOG_LANE_R;
+                        break;
+                }
+
+                // start an analog if this is a start point
+                if (point_state == VoxAnalogStateStart)
+                {
+                    // assert that there is not already an analog being built
+                    assert(!state->building_analogs[lane]);
+
+                    // create a new analog and set the building analog to it
+                    Analog *analog = malloc(sizeof(Analog));
+                    analog->num_points = 0;
+                    state->building_analogs[lane] = analog;
+                }
+
+                // assert that an analog is currently being built
+                assert(state->building_analogs[lane]);
+
+                // create the point
+                AnalogPoint point = (AnalogPoint)
+                {
+                    .subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
+                    .position = atoi(values[1]) / 127.0, //position is on a scale of 0 to 127
+                    .slam = false,
+                };
+
+                // set whether or not the current point is a slam
+                if (state->building_analogs[lane]->num_points > 0)
+                {
+                    AnalogPoint *previous_point = &state->building_analogs[lane]->points[state->building_analogs[lane]->num_points - 1];
+                    point.slam = point.subbeat == previous_point->subbeat;
+                }
+
+                // append the point to the current building analogs points
+                Analog *analog = state->building_analogs[lane];
+                analog->points[analog->num_points] = point;
+                analog->num_points += 1;
+
+                // end the current analog if this is an end point
+                if (point_state == VoxAnalogStateEnd)
+                {
+                    // pop the current analog into the charts analogs
+                    Analog *analog = state->building_analogs[lane];
+                    chart->analogs[lane][chart->num_analogs[lane]] = *analog;
+                    chart->num_analogs[lane] += 1;
+
+                    // free the now finished analog
+                    free(analog);
+                    state->building_analogs[lane] = NULL;
+                }
+
                 break;
             }
             case VoxSectionTrackBtA:
