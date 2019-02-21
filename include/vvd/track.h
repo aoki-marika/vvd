@@ -4,12 +4,31 @@
 #include "program.h"
 #include "mesh.h"
 
-// max values
-#define TRACK_MEASURE_BARS_MAX 512
+//
+// TRACK
+//
 
 // the size of the track
-#define TRACK_WIDTH 1.0f
-#define TRACK_LENGTH 10.0f
+#define TRACK_WIDTH 0.74f
+#define TRACK_LENGTH 12.0f
+
+// the number of beats that should be visible at 1x speed
+#define TRACK_BEAT_SPEED 8
+
+//
+// CAMERA
+//
+
+// the visual offset, on the y axis, of the track
+// this is used so the track is higher up on the screen
+#define TRACK_VISUAL_OFFSET -3.75f
+
+// the offset, on the z axis, of the camera from the start of the track
+#define TRACK_CAMERA_OFFSET -1.0f
+
+//
+// BUFFER
+//
 
 // the number of beats in a single buffer chunk
 #define TRACK_BUFFER_CHUNK_BEATS 4
@@ -17,15 +36,9 @@
 // the number of extra buffer chunks that are loaded before and after the current buffer chunks
 #define TRACK_EXTRA_BUFFER_CHUNKS 2
 
-// the visual offset, on the y axis, of the track
-// this is used so the track is higher up on the screen
-#define TRACK_VISUAL_OFFSET -7.0f
-
-// the offset, on the z axis, of the camera from the start of the track
-#define TRACK_CAMERA_OFFSET -11.5f
-
-// the number of beats that should be visible at 1x speed
-#define TRACK_BEAT_SPEED 8
+//
+// NOTES AND BARS
+//
 
 // the height of a measure or beat bar on the track
 #define TRACK_BAR_HEIGHT 0.025f

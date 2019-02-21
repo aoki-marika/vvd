@@ -318,14 +318,14 @@ void track_draw(Track *track, double time)
     mat4_t projection = m4_perspective(90.0f,
                                        (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT,
                                        0.1f,
-                                       TRACK_LENGTH + -TRACK_CAMERA_OFFSET); //clip past the end of the track
+                                       100.0f);
 
     // create the view matrix
     mat4_t view = m4_look_at(vec3(0, 0, -TRACK_LENGTH + TRACK_CAMERA_OFFSET),
                              vec3(0, TRACK_VISUAL_OFFSET, 0),
                              vec3(0, 1, 0));
 
-    view = m4_mul(view, m4_rotation_x(85.0f / 180.0f * M_PI));
+    view = m4_mul(view, m4_rotation_x(86.0f / 180.0f * M_PI));
 
     // create the model matrix
     mat4_t model = m4_identity();
