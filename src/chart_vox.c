@@ -217,7 +217,7 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
             case VoxSectionTrackAnalogL:
             case VoxSectionTrackAnalogR:
             {
-                // timing, position, state, spin, effect, wide
+                // timing, position, state, spin, effect, wide, ? (only in newer charts)
                 // position: 0 - 127
                 // state: 0 = continue, 1 = start, 2 = end
                 // spin:
@@ -231,8 +231,9 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                 //  - 7 = sweep, 1/8 measure long
                 // effect: laser effect number?
                 // wide: 1 = normal, 2 = wide (maybe just a multiplier for position?)
+                // ?: ?
                 // slams are parsed by two points being on the same subbeat
-                assert(num_values == 6);
+                assert(num_values == 5 || num_values == 6 || num_values == 7);
 
                 // get this points state
                 int point_state = atoi(values[2]);
