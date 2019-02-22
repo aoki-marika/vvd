@@ -60,6 +60,29 @@ void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height
     mesh_set_vertices(mesh, index, vertices, sizeof(vertices));
 }
 
+void mesh_set_vertices_quad_edges(Mesh *mesh, int index, GLfloat width, vec3_t start_position, vec3_t end_position)
+{
+    // calculate the vertice positions
+    mat4_t model = m4_identity();
+    vec3_t draw_start_position = m4_mul_pos(model, vec3(-start_position.x, start_position.y, start_position.z));
+    vec3_t draw_end_position = m4_mul_pos(model, vec3(-end_position.x, end_position.y, end_position.z));
+
+    // generate the quad
+    const GLfloat vertices[] =
+    {
+        draw_end_position.x,           draw_end_position.y,   draw_start_position.z, //top left
+        draw_end_position.x - width,   draw_end_position.y,   draw_start_position.z, //top right
+        draw_start_position.x - width, draw_start_position.y, draw_start_position.z, //bottom right
+
+        draw_start_position.x - width, draw_start_position.y, draw_start_position.z, //bottom right
+        draw_start_position.x,         draw_start_position.y, draw_start_position.z, //bottom left
+        draw_end_position.x,           draw_end_position.y,   draw_start_position.z, //top left
+    };
+
+    // set the mesh vertices
+    mesh_set_vertices(mesh, index, vertices, sizeof(vertices));
+}
+
 void mesh_draw(Mesh *mesh, int index, size_t size)
 {
     // assert that the index and size are valid

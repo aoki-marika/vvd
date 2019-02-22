@@ -41,6 +41,10 @@ void mesh_set_vertices(Mesh *mesh, int index, const GLfloat *vertices, size_t ve
 // -y = down, +y = up
 void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height, vec3_t position);
 
+// a helper method for calling mesh_set_vertices with a quad generated from the given width, drawn from the given start to end positions
+// origin and position are the same as mesh_set_vertices_quad
+void mesh_set_vertices_quad_edges(Mesh *mesh, int index, GLfloat width, vec3_t start_position, vec3_t end_position);
+
 // draw the given meshes vertices starting at the given vertex index and of the given size
 void mesh_draw(Mesh *mesh, int index, size_t size);
 
