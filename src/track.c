@@ -22,8 +22,37 @@ Track *track_create(Chart *chart)
 
     // create the lane program and mesh
     track->lane_program = program_create("lane.vs", "lane.fs", true);
-    track->lane_mesh = mesh_create(MESH_VERTICES_QUAD, track->lane_program, GL_STATIC_DRAW);
-    mesh_set_vertices_quad(track->lane_mesh, 0, TRACK_WIDTH, TRACK_LENGTH, vec3(-TRACK_WIDTH / 2, -TRACK_LENGTH / 2, 0));
+    track->uniform_lane_lane_id = program_get_uniform_id(track->lane_program, "lane");
+    track->lane_mesh = mesh_create(MESH_VERTICES_QUAD * (CHART_ANALOG_LANES + 1), track->lane_program, GL_STATIC_DRAW);
+
+    // set the note lane vertices
+    mesh_set_vertices_quad(track->lane_mesh,
+                           0,
+                           TRACK_NOTES_WIDTH,
+                           TRACK_LENGTH,
+                           vec3(-TRACK_NOTES_WIDTH / 2,
+                                -TRACK_LENGTH / 2,
+                                0));
+
+    // create the analog gutter vertices
+    for (int i = 1; i <= CHART_ANALOG_LANES; i++)
+    {
+        // get the position of the current lane
+        vec3_t position = vec3(0, -TRACK_LENGTH / 2, 0);
+
+        // set the x position so even lanes are on the right and uneven are on the left
+        if (i % 2 == 0)
+            position.x = (TRACK_NOTES_WIDTH / 2) + (TRACK_GUTTER_WIDTH * ((i - 1) / 2));
+        else
+            position.x = (-TRACK_NOTES_WIDTH / 2) - (TRACK_GUTTER_WIDTH * i);
+
+        // set the gutters vertices
+        mesh_set_vertices_quad(track->lane_mesh,
+                               MESH_VERTICES_QUAD * i,
+                               TRACK_GUTTER_WIDTH,
+                               TRACK_LENGTH,
+                               position);
+    }
 
     // create the measure bars program and mesh
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
@@ -104,7 +133,7 @@ void load_measure_bars_mesh(Track *track)
     int beat_index = 0;
 
     // the last measures draw position
-    vec3_t measure_position = vec3(-TRACK_WIDTH / 2, 0, 0);
+    vec3_t measure_position = vec3(-TRACK_NOTES_WIDTH / 2, 0, 0);
 
     // for each measure
     for (uint16_t i = 0; i < track->chart->num_measures; i++)
@@ -112,7 +141,7 @@ void load_measure_bars_mesh(Track *track)
         // create the measure bar for the current measure
         mesh_set_vertices_quad(track->measure_bars_mesh,
                                i * MESH_VERTICES_QUAD,
-                               TRACK_WIDTH,
+                               TRACK_NOTES_WIDTH,
                                TRACK_BAR_HEIGHT,
                                measure_position);
 
@@ -200,7 +229,7 @@ void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
             }
 
             // calculate the start position of the note
-            vec3_t position = vec3((l * note_width) - (TRACK_WIDTH / 2),
+            vec3_t position = vec3((l * note_width) - (TRACK_NOTES_WIDTH / 2),
                                    subbeat_position(note->start_subbeat, speed),
                                    0);
 
@@ -240,7 +269,7 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
                       TRACK_BT_WIDTH,
                       track->speed);
 
-    // load the fx notes
+    // update the fx notes
     update_notes_mesh(track->fx_chips_mesh,
                       track->fx_holds_mesh,
                       start_subbeat,
@@ -350,7 +379,12 @@ void track_draw(Track *track, double time)
     // draw the lane
     program_use(track->lane_program);
     program_set_matrices(track->lane_program, projection, view, model);
-    mesh_draw_all(track->lane_mesh);
+
+    for (int i = 0; i < CHART_ANALOG_LANES + 1; i++)
+    {
+        glUniform1i(track->uniform_lane_lane_id, i);
+        mesh_draw(track->lane_mesh, i * MESH_VERTICES_QUAD, MESH_VERTICES_QUAD);
+    }
 
     // scroll the bars and notes
     // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0

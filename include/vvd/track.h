@@ -8,8 +8,16 @@
 // TRACK
 //
 
-// the size of the track
-#define TRACK_WIDTH 0.74f
+// the size of the tracks note area
+#define TRACK_NOTES_WIDTH 0.75f
+
+// the size of an analog gutter on the track
+#define TRACK_GUTTER_WIDTH 0.15f
+
+// the full width of the track
+#define TRACK_WIDTH TRACK_NOTES_WIDTH + (TRACK_GUTTER_WIDTH * CHART_ANALOG_LANES)
+
+// the length of the track
 #define TRACK_LENGTH 12.0f
 
 // the number of beats that should be visible at 1x speed
@@ -47,7 +55,7 @@
 #define TRACK_CHIP_HEIGHT 0.075f
 
 // the width of a bt note on the track
-#define TRACK_BT_WIDTH TRACK_WIDTH / CHART_BT_LANES
+#define TRACK_BT_WIDTH TRACK_NOTES_WIDTH / CHART_BT_LANES
 
 typedef struct
 {
@@ -65,6 +73,7 @@ typedef struct
 
     // the lane (track background) program and mesh
     Program *lane_program;
+    GLuint uniform_lane_lane_id;
     Mesh *lane_mesh;
 
     // the measure bars program and mesh
