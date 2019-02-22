@@ -77,6 +77,9 @@ typedef struct
     // the position of this point on the track, from 0 to 1
     double position;
 
+    // the scale for the grid on which this point is placed
+    double position_scale;
+
     // whether or not this point and the previous point join to make a slam
     bool slam;
 } AnalogPoint;

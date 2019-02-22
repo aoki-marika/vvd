@@ -276,6 +276,7 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                 {
                     .subbeat = note_time_to_subbeat(chart, measure, beat, subbeat),
                     .position = atoi(values[1]) / 127.0, //position is on a scale of 0 to 127
+                    .position_scale = (num_values >= 6) ? atof(values[5]) : 1,
                     .slam = false,
                 };
 
