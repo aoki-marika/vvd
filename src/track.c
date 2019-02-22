@@ -82,6 +82,15 @@ Track *track_create(Chart *chart)
     for (int i = 0; i < CHART_FX_LANES; i++)
         track->fx_lanes_vertices[i] = malloc(sizeof(TrackLaneVertices));
 
+    // create the analogs program and mesh
+    track->analogs_program = program_create("analog.vs", "analog.fs", true);
+    track->uniform_analogs_lane_id = program_get_uniform_id(track->analogs_program, "lane");
+    track->analogs_mesh = mesh_create(MESH_VERTICES_QUAD * CHART_ANALOG_LANES * CHART_NOTES_MAX * CHART_ANALOG_POINTS_MAX, track->analogs_program, GL_DYNAMIC_DRAW);
+
+    // create the analog lanes vertices
+    for (int i = 0; i < CHART_ANALOG_LANES; i++)
+        track->analog_lanes_vertices[i] = malloc(sizeof(TrackLaneVertices));
+
     // return the track
     return track;
 }
@@ -95,6 +104,7 @@ void track_free(Track *track)
     program_free(track->bt_holds_program);
     program_free(track->fx_chips_program);
     program_free(track->fx_holds_program);
+    program_free(track->analogs_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
@@ -103,6 +113,7 @@ void track_free(Track *track)
     mesh_free(track->bt_holds_mesh);
     mesh_free(track->fx_chips_mesh);
     mesh_free(track->fx_holds_mesh);
+    mesh_free(track->analogs_mesh);
 
     // free all the allocated properties
     for (int i = 0; i < CHART_BT_LANES; i++)
@@ -110,6 +121,9 @@ void track_free(Track *track)
 
     for (int i = 0; i < CHART_FX_LANES; i++)
         free(track->fx_lanes_vertices[i]);
+
+    for (int i = 0; i < CHART_ANALOG_LANES; i++)
+        free(track->analog_lanes_vertices[i]);
 
     // free the track
     free(track);
@@ -315,6 +329,11 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
                       track->fx_lanes_vertices,
                       TRACK_BT_WIDTH * (CHART_BT_LANES / CHART_FX_LANES),
                       track->speed);
+
+    // update the analogs
+    update_analogs_mesh(track,
+                        start_subbeat,
+                        end_subbeat);
 }
 
 void update_chart_meshes_at_time(Track *track, double time, bool force)
@@ -464,4 +483,27 @@ void track_draw(Track *track, double time)
                projection, view, model,
                CHART_BT_LANES,
                track->bt_lanes_vertices);
+
+    // draw the analogs
+
+    // additive blending for analogs
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+    // raise analogs slightly above the track
+    model = m4_mul(model, m4_translation(vec3(0, 0, -0.005)));
+
+    // set the mvp matrices
+    program_use(track->analogs_program);
+    program_set_matrices(track->analogs_program, projection, view, model);
+
+    // for each analog lane
+    for (int i = 0; i < CHART_ANALOG_LANES; i++)
+    {
+        // set the shaders current lane
+        glUniform1i(track->uniform_analogs_lane_id, i);
+
+        // draw the lane
+        TrackLaneVertices *lane_vertices = track->analog_lanes_vertices[i];
+        mesh_draw(track->analogs_mesh, lane_vertices->offset, lane_vertices->size);
+    }
 }

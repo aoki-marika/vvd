@@ -57,6 +57,12 @@
 // the width of a bt note on the track
 #define TRACK_BT_WIDTH TRACK_NOTES_WIDTH / CHART_BT_LANES
 
+// the width of a non-slam analog on the track
+#define TRACK_ANALOG_WIDTH TRACK_GUTTER_WIDTH * 1.1
+
+// the height in subbeats of an analog slam
+#define TRACK_ANALOG_SLAM_SUBBEATS 8
+
 typedef struct
 {
     // the offset of the vertices to draw in the mesh
@@ -89,6 +95,12 @@ typedef struct
     Program *fx_chips_program, *fx_holds_program;
     Mesh *fx_chips_mesh, *fx_holds_mesh;
     TrackLaneVertices *fx_lanes_vertices[CHART_FX_LANES];
+
+    // the analogs program and mesh
+    Program *analogs_program;
+    GLuint uniform_analogs_lane_id;
+    Mesh *analogs_mesh;
+    TrackLaneVertices *analog_lanes_vertices[CHART_ANALOG_LANES];
 
     // the current time this track is scrolled to, in milliseconds
     double time;
