@@ -9,7 +9,7 @@ void gl_assert()
     assert(glGetError() == 0);
 }
 
-Screen *screen_get()
+Screen *screen_create()
 {
     // init bcm for getting a frambuffer output
     bcm_host_init();
