@@ -300,6 +300,147 @@ void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
     }
 }
 
+float analog_point_draw_position(AnalogPoint *point)
+{
+    float analog_track_width = (TRACK_WIDTH - TRACK_ANALOG_WIDTH) * point->position_scale;
+    return point->position * analog_track_width - (TRACK_ANALOG_WIDTH / 2) - (analog_track_width / 2);
+}
+
+void update_analogs_mesh(Track *track,
+                         uint16_t start_subbeat,
+                         uint16_t end_subbeat)
+{
+    // for each lane
+    for (int l = 0; l < CHART_ANALOG_LANES; l++)
+    {
+        // get the current lane vertices
+        TrackLaneVertices *lane_vertices = track->analog_lanes_vertices[l];
+
+        // reset the offset and size
+        lane_vertices->offset = 0;
+        lane_vertices->size = 0;
+
+        // whether or not the offset for the current lane has been set
+        bool offset_set = false;
+
+        // for each analog
+        for (int a = 0; a < track->chart->num_analogs[l]; a++)
+        {
+            Analog *analog = &track->chart->analogs[l][a];
+
+            // get the index of the vertices for the current lane and analog
+            // CHART_ANALOG_POINTS_MAX + 1 is for slam tails
+            int lane_vertices_index = l * (CHART_NOTES_MAX * (CHART_ANALOG_POINTS_MAX + 1) * MESH_VERTICES_QUAD);
+            int analog_vertices_index = lane_vertices_index + (a * (CHART_ANALOG_POINTS_MAX + 1) * MESH_VERTICES_QUAD);
+
+            // whether or not this lane of analogs is finished creating its vertices
+            bool finished = false;
+
+            // for each point
+            for (int p = 0; p < analog->num_points - 1; p++)
+            {
+                AnalogPoint *point = &analog->points[p];
+                AnalogPoint *next_point = &analog->points[p + 1];
+
+                // calculate the offset for the vertices of this segment
+                int segment_vertices_index = analog_vertices_index + (p * MESH_VERTICES_QUAD);
+
+                // update the lane vertices offset
+                if (update_lane_vertices_offset(lane_vertices,
+                                                &offset_set,
+                                                start_subbeat,
+                                                segment_vertices_index,
+                                                next_point->subbeat))
+                    continue;
+
+                // update the lane vertices size
+                if (update_lane_vertices_size(lane_vertices,
+                                              end_subbeat,
+                                              analog->num_points - 1,
+                                              p,
+                                              segment_vertices_index,
+                                              MESH_VERTICES_QUAD + ((next_point->slam) ? MESH_VERTICES_QUAD : 0),
+                                              next_point->subbeat))
+                {
+                    // break this analog and all the analogs after it
+                    finished = true;
+                    break;
+                }
+
+                // if this segment is a slam
+                if (next_point->slam)
+                {
+                    // get the slams position
+                    vec3_t position = vec3(0,
+                                           subbeat_position(point->subbeat, track->speed),
+                                           0);
+
+                    // get the slams x position depending on which point is before the other
+                    if (point->position < next_point->position)
+                        position.x = analog_point_draw_position(point);
+                    else
+                        position.x = analog_point_draw_position(next_point);
+
+                    // calculate the width by getting the difference in draw positions between the next and previous points
+                    // + TRACK_ANALOG_WIDTH so the edges of the slam go to the edges of other segments
+                    float width = fabs(analog_point_draw_position(next_point) - analog_point_draw_position(point)) + TRACK_ANALOG_WIDTH;
+
+                    // create the slam
+                    mesh_set_vertices_quad(track->analogs_mesh,
+                                           segment_vertices_index,
+                                           width,
+                                           subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
+                                           position);
+
+                    // append a slam tail if this is the last segment in the current analog
+                    if (p == analog->num_points - 2)
+                    {
+                        // get the tails position
+                        vec3_t tail_position = vec3(analog_point_draw_position(next_point),
+                                                    position.y + subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
+                                                    0);
+
+                        // append the slam tail
+                        mesh_set_vertices_quad(track->analogs_mesh,
+                                               segment_vertices_index + MESH_VERTICES_QUAD,
+                                               TRACK_ANALOG_WIDTH,
+                                               subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
+                                               tail_position);
+                    }
+                }
+                // if this segment is not a slam
+                else
+                {
+                    // calculate the start position of this segment
+                    vec3_t start_position = vec3(analog_point_draw_position(point),
+                                                 subbeat_position(point->subbeat, track->speed),
+                                                 0);
+
+                    // offset the start of the segment if the previous segment was a slam for the slams height
+                    if (point->slam)
+                        start_position.y += subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed);
+
+                    // calculate the end position of this segment
+                    vec3_t end_position = vec3(analog_point_draw_position(next_point),
+                                               subbeat_position(next_point->subbeat, track->speed),
+                                               0);
+
+                    // add the segments vertices to the analog mesh
+                    mesh_set_vertices_quad_edges(track->analogs_mesh,
+                                                 segment_vertices_index,
+                                                 TRACK_ANALOG_WIDTH,
+                                                 start_position,
+                                                 end_position);
+                }
+            }
+
+            // break if the analog vertices are finished being created
+            if (finished)
+                break;
+        }
+    }
+}
+
 void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
 {
     // calculate the start and end subbeat for buffer_position
