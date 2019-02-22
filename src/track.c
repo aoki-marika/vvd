@@ -164,6 +164,55 @@ void load_measure_bars_mesh(Track *track)
     }
 }
 
+bool update_lane_vertices_offset(TrackLaneVertices *lane_vertices,
+                                 bool *offset_set,
+                                 uint16_t start_subbeat,
+                                 int vertices_index,
+                                 uint16_t subbeat)
+{
+    // returns whether or not the vertices creation loop should skip the current note
+
+    // if offset hasnt been set yet
+    if (!*offset_set)
+    {
+        // set offset
+        lane_vertices->offset = vertices_index;
+
+        // skip creating the vertices if it is before the current subbeat
+        if (subbeat < start_subbeat)
+            return true;
+        // all before start subbeat notes have been skipped, mark the offset as set
+        else
+            *offset_set = true;
+
+        // this note is at or after start_subbeat, it should be created
+        return false;
+    }
+}
+
+bool update_lane_vertices_size(TrackLaneVertices *lane_vertices,
+                               uint16_t end_subbeat,
+                               int num_notes,
+                               int note_index,
+                               int vertices_index,
+                               int note_size,
+                               uint16_t subbeat)
+{
+    // returns whether or not the vertices creation loop should break
+
+    // set size
+    lane_vertices->size = vertices_index - lane_vertices->offset;
+
+    // last notes end up getting skipped as vertices_index isnt incremented, so do it manually
+    // todo: better way of doing this?
+    if (note_index == num_notes - 1)
+        lane_vertices->size += note_size;
+
+    // break this lane if the current note is after the end subbeat
+    // no notes after it can be within range
+    return subbeat >= end_subbeat;
+}
+
 void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
                        Mesh *holds_mesh, //the mesh to add hold note vertices to
                        uint16_t start_subbeat, //the minimum subbeat for notes to add
@@ -185,9 +234,8 @@ void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
         lane_vertices->offset = 0;
         lane_vertices->size = 0;
 
-        // whether or not the offset and size for the current lane has been set
+        // whether or not the offset for the current lane has been set
         bool offset_set = false;
-        bool size_set = false;
 
         // for each note
         for (int n = 0; n < num_notes[l]; n++)
@@ -197,36 +245,23 @@ void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
             // get the index of the vertices for the current note
             int vertices_index = ((l * CHART_NOTES_MAX) + n) * MESH_VERTICES_QUAD;
 
-            // if offset hasnt been set yet
-            if (!offset_set)
-            {
-                // set offset
-                lane_vertices->offset = vertices_index;
+            // update the lane vertices offset
+            if (update_lane_vertices_offset(lane_vertices,
+                                            &offset_set,
+                                            start_subbeat,
+                                            vertices_index,
+                                            note->hold ? note->end_subbeat : note->start_subbeat))
+                continue;
 
-                // skip creating the note vertices if it is before the current subbeat
-                if ((note->hold ? note->end_subbeat : note->start_subbeat) < start_subbeat)
-                    continue;
-                // all before start subbeat notes have been skipped, mark the offset as set
-                else
-                    offset_set = true;
-            }
-
-            // if size hasnt been set yet
-            if (!size_set)
-            {
-                // set size
-                lane_vertices->size = vertices_index - lane_vertices->offset;
-
-                // last notes end up getting skipped as vertices_index isnt incremented, so do it manually
-                // todo: better way of doing this?
-                if (n == num_notes[l] - 1)
-                    lane_vertices->size += MESH_VERTICES_QUAD;
-
-                // break this lane if the current note is after the end subbeat
-                // no notes after it can be within range
-                if (note->start_subbeat >= end_subbeat)
-                    break;
-            }
+            // update the lane vertices size
+            if (update_lane_vertices_size(lane_vertices,
+                                          end_subbeat,
+                                          num_notes[l],
+                                          n,
+                                          vertices_index,
+                                          MESH_VERTICES_QUAD,
+                                          note->start_subbeat))
+                break;
 
             // calculate the start position of the note
             vec3_t position = vec3((l * note_width) - (TRACK_NOTES_WIDTH / 2),
@@ -396,6 +431,9 @@ void track_draw(Track *track, double time)
     program_set_matrices(track->measure_bars_program, projection, view, model);
     mesh_draw_all(track->measure_bars_mesh);
 
+    // additive blending for holds
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
     // draw the fx holds
     draw_lanes(track->fx_holds_program,
                track->fx_holds_mesh,
@@ -409,6 +447,9 @@ void track_draw(Track *track, double time)
                projection, view, model,
                CHART_BT_LANES,
                track->bt_lanes_vertices);
+
+    // normal blending for chips
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // draw the fx chips
     draw_lanes(track->fx_chips_program,
