@@ -280,6 +280,19 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                     .slam = false,
                 };
 
+                // get the tempo of the point
+                Tempo *tempo;
+                for (int i = 0; i < chart->num_tempos; i++)
+                {
+                    if (chart->tempos[i].subbeat > point.subbeat)
+                        break;
+
+                    tempo = &chart->tempos[i];
+                }
+
+                // set the points time
+                point.time = subbeat_at_tempo_to_time(tempo, point.subbeat);
+
                 // set whether or not the current point is a slam
                 if (state->building_analogs[lane]->num_points > 0)
                 {
@@ -362,6 +375,20 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                     note.hold = true;
                     note.end_subbeat = note.start_subbeat + length;
                 }
+
+                // get the tempo of the note
+                Tempo *tempo;
+                for (int i = 0; i < chart->num_tempos; i++)
+                {
+                    if (chart->tempos[i].subbeat > note.start_subbeat)
+                        break;
+
+                    tempo = &chart->tempos[i];
+                }
+
+                // set the notes start and end times
+                note.start_time = subbeat_at_tempo_to_time(tempo, note.start_subbeat);
+                note.end_time = subbeat_at_tempo_to_time(tempo, note.end_subbeat);
 
                 // append the note to the charts notes
                 notes[*num_notes] = note;

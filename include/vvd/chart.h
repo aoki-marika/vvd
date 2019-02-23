@@ -58,20 +58,23 @@ typedef struct
 
 typedef struct
 {
-    // the subbeat this note starts at
+    // the time and subbeat this note starts at
+    double start_time;
     uint16_t start_subbeat;
 
     // whether or not this note is a hold note
     bool hold;
 
-    // the subbeat this note ends at
+    // the time and subbeat this note ends at
     // only applicable to hold notes
+    double end_time;
     uint16_t end_subbeat;
 } Note;
 
 typedef struct
 {
-    // the subbeat this point starts at
+    // the time and subbeat this point starts at
+    double time;
     uint16_t subbeat;
 
     // the position of this point on the track, from 0 to 1
