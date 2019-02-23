@@ -35,6 +35,18 @@ double subbeats_at_tempo_to_duration(Tempo *tempo, uint16_t subbeats)
     return ((double)subbeats / CHART_BEAT_SUBBEATS) * (60.0f / tempo->bpm) * 1000.0;
 }
 
+double subbeat_at_tempo_to_time(Tempo *tempo, uint16_t subbeat)
+{
+    // get the duration of one subbeat
+    double subbeat_duration = subbeats_at_tempo_to_duration(tempo, 1);
+
+    // get the time of subbeat relative to tempo
+    double relative_time = (subbeat - tempo->subbeat) * subbeat_duration;
+
+    // return the absolute time by offseting relative time by tempos tempo
+    return tempo->time + relative_time;
+}
+
 double time_to_subbeat(Chart *chart, int tempo_index, double time)
 {
     // assert that tempo_index is valid
