@@ -17,7 +17,6 @@ Track *track_create(Chart *chart)
     // set the track properties
     track->chart = chart;
     track->tempo_index = 0;
-    track->speed = 1.0;
     track->buffer_position = -1;
 
     // create the lane program and mesh
@@ -591,7 +590,7 @@ void track_draw(Track *track, double time)
     program_set_matrices(track->measure_bars_program, projection, view, model);
     mesh_draw_all(track->measure_bars_mesh);
 
-    // additive blending for holds
+    // additive blending for holds and analogs
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     // draw the fx holds
@@ -608,27 +607,7 @@ void track_draw(Track *track, double time)
                CHART_BT_LANES,
                track->bt_lanes_vertices);
 
-    // normal blending for chips
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // draw the fx chips
-    draw_lanes(track->fx_chips_program,
-               track->fx_chips_mesh,
-               projection, view, model,
-               CHART_FX_LANES,
-               track->fx_lanes_vertices);
-
-    // draw the bt chips
-    draw_lanes(track->bt_chips_program,
-               track->bt_chips_mesh,
-               projection, view, model,
-               CHART_BT_LANES,
-               track->bt_lanes_vertices);
-
     // draw the analogs
-
-    // additive blending for analogs
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     // raise analogs slightly above the track
     model = m4_mul(model, m4_translation(vec3(0, 0, -0.005)));
@@ -647,4 +626,21 @@ void track_draw(Track *track, double time)
         TrackLaneVertices *lane_vertices = track->analog_lanes_vertices[i];
         mesh_draw(track->analogs_mesh, lane_vertices->offset, lane_vertices->size);
     }
+
+    // normal blending for chips
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // draw the fx chips
+    draw_lanes(track->fx_chips_program,
+               track->fx_chips_mesh,
+               projection, view, model,
+               CHART_FX_LANES,
+               track->fx_lanes_vertices);
+
+    // draw the bt chips
+    draw_lanes(track->bt_chips_program,
+               track->bt_chips_mesh,
+               projection, view, model,
+               CHART_BT_LANES,
+               track->bt_lanes_vertices);
 }
