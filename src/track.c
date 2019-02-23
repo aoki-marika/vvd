@@ -359,7 +359,7 @@ void update_analogs_mesh(Track *track,
                                               p,
                                               segment_vertices_index,
                                               MESH_VERTICES_QUAD + ((next_point->slam) ? MESH_VERTICES_QUAD : 0),
-                                              next_point->subbeat))
+                                              point->subbeat))
                 {
                     // break this analog and all the analogs after it
                     finished = true;
