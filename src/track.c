@@ -7,6 +7,8 @@
 #include <arkanis/math_3d.h>
 
 #include "screen.h"
+#include "bt_mesh.h"
+#include "fx_mesh.h"
 #include "note_utils.h"
 
 Track *track_create(Chart *chart)
@@ -57,29 +59,9 @@ Track *track_create(Chart *chart)
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
     track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * chart->num_measures, track->measure_bars_program, GL_DYNAMIC_DRAW);
 
-    // create the bt chips and holds programs and meshes
-    track->bt_chips_program = program_create("bt_chip.vs", "bt_chip.fs", true);
-    track->bt_holds_program = program_create("bt_hold.vs", "bt_hold.fs", true);
-
-    size_t bt_mesh_size = MESH_VERTICES_QUAD * CHART_BT_LANES * CHART_NOTES_MAX;
-    track->bt_chips_mesh = mesh_create(bt_mesh_size, track->bt_chips_program, GL_DYNAMIC_DRAW);
-    track->bt_holds_mesh = mesh_create(bt_mesh_size, track->bt_holds_program, GL_DYNAMIC_DRAW);
-
-    // create the bt lanes vertices
-    for (int i = 0; i < CHART_BT_LANES; i++)
-        track->bt_lanes_vertices[i] = malloc(sizeof(TrackLaneVertices));
-
-    // create the fx chips and holds programs and meshes
-    track->fx_chips_program = program_create("fx_chip.vs", "fx_chip.fs", true);
-    track->fx_holds_program = program_create("fx_hold.vs", "fx_hold.fs", true);
-
-    size_t fx_mesh_size = MESH_VERTICES_QUAD * CHART_FX_LANES * CHART_NOTES_MAX;
-    track->fx_chips_mesh = mesh_create(fx_mesh_size, track->fx_chips_program, GL_DYNAMIC_DRAW);
-    track->fx_holds_mesh = mesh_create(fx_mesh_size, track->fx_holds_program, GL_DYNAMIC_DRAW);
-
-    // create the fx lanes vertices
-    for (int i = 0; i < CHART_FX_LANES; i++)
-        track->fx_lanes_vertices[i] = malloc(sizeof(TrackLaneVertices));
+    // create the bt and fx meshes
+    track->bt_mesh = bt_mesh_create();
+    track->fx_mesh = fx_mesh_create();
 
     // create the analogs program and mesh
     track->analogs_program = program_create("analog.vs", "analog.fs", true);
@@ -96,31 +78,21 @@ Track *track_create(Chart *chart)
 
 void track_free(Track *track)
 {
+    // free all the note meshes
+    note_mesh_free(track->bt_mesh);
+    note_mesh_free(track->fx_mesh);
+
     // free all the programs
     program_free(track->lane_program);
     program_free(track->measure_bars_program);
-    program_free(track->bt_chips_program);
-    program_free(track->bt_holds_program);
-    program_free(track->fx_chips_program);
-    program_free(track->fx_holds_program);
     program_free(track->analogs_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
     mesh_free(track->measure_bars_mesh);
-    mesh_free(track->bt_chips_mesh);
-    mesh_free(track->bt_holds_mesh);
-    mesh_free(track->fx_chips_mesh);
-    mesh_free(track->fx_holds_mesh);
     mesh_free(track->analogs_mesh);
 
     // free all the allocated properties
-    for (int i = 0; i < CHART_BT_LANES; i++)
-        free(track->bt_lanes_vertices[i]);
-
-    for (int i = 0; i < CHART_FX_LANES; i++)
-        free(track->fx_lanes_vertices[i]);
-
     for (int i = 0; i < CHART_ANALOG_LANES; i++)
         free(track->analog_lanes_vertices[i]);
 
@@ -134,7 +106,7 @@ float beat_size(double speed)
     return speed / TRACK_BEAT_SPEED * TRACK_LENGTH;
 }
 
-float subbeat_position(double subbeat, double speed)
+float track_subbeat_position(double subbeat, double speed)
 {
     // return the draw position of the given subbeat on the track at the given speed
     return subbeat / CHART_BEAT_SUBBEATS * beat_size(speed);
@@ -164,8 +136,8 @@ void load_measure_bars_mesh(Track *track)
             beat_index++;
 
         // get the start and end position of this measure, as if it was in 4/4 time
-        float start_position = subbeat_position((i - 1) * 4 * CHART_BEAT_SUBBEATS, track->speed);
-        float end_position = subbeat_position(i * 4 * CHART_BEAT_SUBBEATS, track->speed);
+        float start_position = track_subbeat_position((i - 1) * 4 * CHART_BEAT_SUBBEATS, track->speed);
+        float end_position = track_subbeat_position(i * 4 * CHART_BEAT_SUBBEATS, track->speed);
 
         // get the size of the current measure as if it was 4/4 time by getting the difference between the start and end
         // then multiply by numerator/denominator to get the final size of the measure
@@ -278,7 +250,7 @@ void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
 
             // calculate the start position of the note
             vec3_t position = vec3((l * note_width) - (TRACK_NOTES_WIDTH / 2),
-                                   subbeat_position(note->start_subbeat, speed),
+                                   track_subbeat_position(note->start_subbeat, speed),
                                    0);
 
             // calculate the size of the note
@@ -288,7 +260,7 @@ void update_notes_mesh(Mesh *chips_mesh, //the mesh to add chip note vertices to
 
             // if this is a hold note then resize it from the start to end positions
             if (note->hold)
-                size.y = subbeat_position(note->end_subbeat, speed) - position.y;
+                size.y = track_subbeat_position(note->end_subbeat, speed) - position.y;
 
             // add the note vertices to the mesh
             mesh_set_vertices_quad(note->hold ? holds_mesh : chips_mesh,
@@ -371,7 +343,7 @@ void update_analogs_mesh(Track *track,
                 {
                     // get the slams position
                     vec3_t position = vec3(0,
-                                           subbeat_position(point->subbeat, track->speed),
+                                           track_subbeat_position(point->subbeat, track->speed),
                                            0);
 
                     // get the slams x position depending on which point is before the other
@@ -388,7 +360,7 @@ void update_analogs_mesh(Track *track,
                     mesh_set_vertices_quad(track->analogs_mesh,
                                            segment_vertices_index,
                                            width,
-                                           subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
+                                           track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
                                            position);
 
                     // append a slam tail if this is the last segment in the current analog
@@ -396,14 +368,14 @@ void update_analogs_mesh(Track *track,
                     {
                         // get the tails position
                         vec3_t tail_position = vec3(analog_point_draw_position(next_point),
-                                                    position.y + subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
+                                                    position.y + track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
                                                     0);
 
                         // append the slam tail
                         mesh_set_vertices_quad(track->analogs_mesh,
                                                segment_vertices_index + MESH_VERTICES_QUAD,
                                                TRACK_ANALOG_WIDTH,
-                                               subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
+                                               track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed),
                                                tail_position);
                     }
                 }
@@ -412,16 +384,16 @@ void update_analogs_mesh(Track *track,
                 {
                     // calculate the start position of this segment
                     vec3_t start_position = vec3(analog_point_draw_position(point),
-                                                 subbeat_position(point->subbeat, track->speed),
+                                                 track_subbeat_position(point->subbeat, track->speed),
                                                  0);
 
                     // offset the start of the segment if the previous segment was a slam for the slams height
                     if (point->slam)
-                        start_position.y += subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed);
+                        start_position.y += track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS, track->speed);
 
                     // calculate the end position of this segment
                     vec3_t end_position = vec3(analog_point_draw_position(next_point),
-                                               subbeat_position(next_point->subbeat, track->speed),
+                                               track_subbeat_position(next_point->subbeat, track->speed),
                                                0);
 
                     // add the segments vertices to the analog mesh
@@ -446,29 +418,19 @@ void update_chart_meshes(Track *track, int buffer_position, int num_chunks)
     uint16_t start_subbeat = buffer_position * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
     uint16_t end_subbeat = (buffer_position + num_chunks) * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
 
-    // update the bt notes
-    update_notes_mesh(track->bt_chips_mesh,
-                      track->bt_holds_mesh,
-                      start_subbeat,
-                      end_subbeat,
-                      CHART_BT_LANES,
-                      track->chart->num_bt_notes,
-                      track->chart->bt_notes,
-                      track->bt_lanes_vertices,
-                      TRACK_BT_WIDTH,
-                      track->speed);
+    // load the notes for the bt mesh
+    bt_mesh_load(track->bt_mesh,
+                 track->chart,
+                 start_subbeat,
+                 end_subbeat,
+                 track->speed);
 
-    // update the fx notes
-    update_notes_mesh(track->fx_chips_mesh,
-                      track->fx_holds_mesh,
-                      start_subbeat,
-                      end_subbeat,
-                      CHART_FX_LANES,
-                      track->chart->num_fx_notes,
-                      track->chart->fx_notes,
-                      track->fx_lanes_vertices,
-                      TRACK_BT_WIDTH * (CHART_BT_LANES / CHART_FX_LANES),
-                      track->speed);
+    // load the notes for the fx mesh
+    fx_mesh_load(track->fx_mesh,
+                 track->chart,
+                 start_subbeat,
+                 end_subbeat,
+                 track->speed);
 
     // update the analogs
     update_analogs_mesh(track,
@@ -583,7 +545,7 @@ void track_draw(Track *track, double time)
     // scroll the bars and notes
     // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0
     double time_subbeat = time_to_subbeat(track->chart, track->tempo_index, time);
-    model = m4_mul(model, m4_translation(vec3(0, -subbeat_position(time_subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
+    model = m4_mul(model, m4_translation(vec3(0, -track_subbeat_position(time_subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
 
     // draw the measure bars
     program_use(track->measure_bars_program);
@@ -594,18 +556,10 @@ void track_draw(Track *track, double time)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     // draw the fx holds
-    draw_lanes(track->fx_holds_program,
-               track->fx_holds_mesh,
-               projection, view, model,
-               CHART_FX_LANES,
-               track->fx_lanes_vertices);
+    note_mesh_draw_holds(track->fx_mesh, projection, view, model);
 
     // draw the bt holds
-    draw_lanes(track->bt_holds_program,
-               track->bt_holds_mesh,
-               projection, view, model,
-               CHART_BT_LANES,
-               track->bt_lanes_vertices);
+    note_mesh_draw_holds(track->bt_mesh, projection, view, model);
 
     // draw the analogs
 
@@ -627,20 +581,9 @@ void track_draw(Track *track, double time)
         mesh_draw(track->analogs_mesh, lane_vertices->offset, lane_vertices->size);
     }
 
-    // normal blending for chips
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     // draw the fx chips
-    draw_lanes(track->fx_chips_program,
-               track->fx_chips_mesh,
-               projection, view, model,
-               CHART_FX_LANES,
-               track->fx_lanes_vertices);
+    note_mesh_draw_chips(track->fx_mesh, projection, view, model);
 
     // draw the bt chips
-    draw_lanes(track->bt_chips_program,
-               track->bt_chips_mesh,
-               projection, view, model,
-               CHART_BT_LANES,
-               track->bt_lanes_vertices);
+    note_mesh_draw_chips(track->bt_mesh, projection, view, model);
 }

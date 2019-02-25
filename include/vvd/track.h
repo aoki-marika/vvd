@@ -3,6 +3,7 @@
 #include "chart.h"
 #include "program.h"
 #include "mesh.h"
+#include "note_mesh.h"
 
 //
 // TRACK
@@ -49,9 +50,11 @@
 //
 
 // the height of a measure or beat bar on the track
+// todo: proper bar height? not sure if this is resized on speed change
 #define TRACK_BAR_HEIGHT 0.025f
 
 // the height of a bt or fx chip on the track
+// todo: proper chip height
 #define TRACK_CHIP_HEIGHT 0.075f
 
 // the width of a bt note on the track
@@ -86,15 +89,8 @@ typedef struct
     Program *measure_bars_program;
     Mesh *measure_bars_mesh;
 
-    // the bt chips and holds programs and meshes
-    Program *bt_chips_program, *bt_holds_program;
-    Mesh *bt_chips_mesh, *bt_holds_mesh;
-    TrackLaneVertices *bt_lanes_vertices[CHART_BT_LANES];
-
-    // the fx chips and holds programs and meshes
-    Program *fx_chips_program, *fx_holds_program;
-    Mesh *fx_chips_mesh, *fx_holds_mesh;
-    TrackLaneVertices *fx_lanes_vertices[CHART_FX_LANES];
+    // the note meshes for bt and analogs on this track
+    NoteMesh *bt_mesh, *fx_mesh;
 
     // the analogs program and mesh
     Program *analogs_program;
@@ -117,6 +113,9 @@ typedef struct
 
 Track *track_create(Chart *chart);
 void track_free(Track *track);
+
+// get the position of a subbeat on the track at the given speed
+float track_subbeat_position(double subbeat, double speed);
 
 // set the given tracks scroll speed
 void track_set_speed(Track *track, double speed);
