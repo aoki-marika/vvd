@@ -58,7 +58,7 @@ void shader_create(GLuint *shader, GLenum type, const char *source_path)
     assert(source_file);
 
     // the length of the file
-    uint8_t length;
+    long int length;
 
     // the buffer that the file is read into
     char *buffer;
