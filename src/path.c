@@ -7,7 +7,7 @@
 void path_get_relative(const char *path, char output_path[PATH_MAX])
 {
     // get the executable path
-    char executable_path[PATH_MAX];
+    char executable_path[PATH_MAX] = { 0 };
     readlink("/proc/self/exe", executable_path, PATH_MAX);
 
     // get the executable dirname
