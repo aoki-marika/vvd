@@ -165,6 +165,7 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                 // set the charts end timing
                 chart->num_measures = measure + 1;
                 chart->end_subbeat = note_time_to_subbeat(chart, measure, beat, subbeat);
+                chart->end_time = subbeat_at_tempo_to_time(&chart->tempos[chart->num_tempos - 1], chart->end_subbeat);
 
                 break;
             }

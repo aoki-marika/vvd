@@ -131,6 +131,9 @@ typedef struct
     // the subbeat this chart ends at
     uint16_t end_subbeat;
 
+    // the time, in milliseconds, this chart ends at
+    double end_time;
+
     // the total number of measures in this chart
     uint16_t num_measures;
 } Chart;
