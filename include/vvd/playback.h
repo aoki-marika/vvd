@@ -4,6 +4,9 @@
 #include "audio_track.h"
 #include "track.h"
 
+// the value used to signify that there is no current note/analog in a playbacks current_* array
+#define PLAYBACK_CURRENT_NONE -1
+
 typedef struct
 {
     // the chart this playback is playing
@@ -21,6 +24,15 @@ typedef struct
 
     // the time, in milliseconds, that this playback should begin playing at
     double start_time;
+
+    // the indexes of the currents notes and analogs from the last call to playback_update
+    int current_bt_notes[CHART_BT_LANES];
+    int current_fx_notes[CHART_FX_LANES];
+    int current_analogs[CHART_ANALOG_LANES];
+
+    // the index of the start point of the current segment of each analog in current_analogs
+    // relative to current_analogs points
+    int current_analogs_points[CHART_ANALOG_LANES];
 } Playback;
 
 Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track);
