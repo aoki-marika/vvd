@@ -12,6 +12,7 @@ AnalogMesh *analog_mesh_create()
     mesh->program_lane_id = program_get_uniform_id(mesh->program, "lane");
 
     // create the meshes
+    // todo: analog mesh sizes do not need to be this big, see note_mesh.c
     size_t mesh_size = CHART_NOTES_MAX * CHART_ANALOG_POINTS_MAX * MESH_VERTICES_QUAD;
     for (int i = 0; i < CHART_ANALOG_LANES; i++)
         mesh->lane_meshes[i] = mesh_create(mesh_size, mesh->program, GL_DYNAMIC_DRAW);

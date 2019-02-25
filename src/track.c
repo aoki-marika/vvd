@@ -70,11 +70,6 @@ Track *track_create(Chart *chart)
 
 void track_free(Track *track)
 {
-    // free all the note/analog meshes
-    note_mesh_free(track->bt_mesh);
-    note_mesh_free(track->fx_mesh);
-    analog_mesh_free(track->analog_mesh);
-
     // free all the programs
     program_free(track->lane_program);
     program_free(track->measure_bars_program);
@@ -82,6 +77,11 @@ void track_free(Track *track)
     // free all the meshes
     mesh_free(track->lane_mesh);
     mesh_free(track->measure_bars_mesh);
+
+    // free all the note/analog meshes
+    note_mesh_free(track->bt_mesh);
+    note_mesh_free(track->fx_mesh);
+    analog_mesh_free(track->analog_mesh);
 
     // free the track
     free(track);

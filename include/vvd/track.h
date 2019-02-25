@@ -54,8 +54,7 @@
 // todo: proper bar height? not sure if this is resized on speed change
 #define TRACK_BAR_HEIGHT 0.025f
 
-// the height of a bt or fx chip on the track
-// todo: proper chip height
+// the height of bt and fx chips
 #define TRACK_CHIP_HEIGHT 0.075f
 
 // the width of a bt note on the track
@@ -65,6 +64,7 @@
 #define TRACK_ANALOG_WIDTH TRACK_GUTTER_WIDTH * 1.1
 
 // the height in subbeats of an analog slam
+// todo: slams seem to resize based on tempo
 #define TRACK_ANALOG_SLAM_SUBBEATS 8
 
 typedef struct
