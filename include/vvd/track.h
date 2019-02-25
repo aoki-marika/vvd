@@ -4,6 +4,7 @@
 #include "program.h"
 #include "mesh.h"
 #include "note_mesh.h"
+#include "analog_mesh.h"
 
 //
 // TRACK
@@ -68,15 +69,6 @@
 
 typedef struct
 {
-    // the offset of the vertices to draw in the mesh
-    int offset;
-
-    // the size of the vertices to draw in the mesh
-    size_t size;
-} TrackLaneVertices;
-
-typedef struct
-{
     // the chart this track is displaying
     Chart *chart;
 
@@ -89,14 +81,9 @@ typedef struct
     Program *measure_bars_program;
     Mesh *measure_bars_mesh;
 
-    // the note meshes for bt and analogs on this track
+    // the bt, fx, and analog meshes of this track
     NoteMesh *bt_mesh, *fx_mesh;
-
-    // the analogs program and mesh
-    Program *analogs_program;
-    GLuint uniform_analogs_lane_id;
-    Mesh *analogs_mesh;
-    TrackLaneVertices *analog_lanes_vertices[CHART_ANALOG_LANES];
+    AnalogMesh *analog_mesh;
 
     // the current time this track is scrolled to, in milliseconds
     double time;
