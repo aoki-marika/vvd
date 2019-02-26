@@ -123,8 +123,8 @@ typedef struct
     NoteMesh *bt_mesh, *fx_mesh;
     AnalogMesh *analog_mesh;
 
-    // the current time this track is scrolled to, in milliseconds
-    double time;
+    // the last subbeat this track was drawn at
+    double subbeat;
 
     // the index of the last tempo this track was drawn at
     int tempo_index;
@@ -149,6 +149,6 @@ void track_set_speed(Track *track, double speed);
 void track_bt_beam(Track *track, int lane, Judgement judgement);
 void track_fx_beam(Track *track, int lane, Judgement judgement);
 
-// draw the given tracks state at the given tempo and time
+// draw the given tracks state at the given tempo and subbeat
 // tempo_index should be in the given tracks charts tempos
-void track_draw(Track *track, int tempo_index, double time);
+void track_draw(Track *track, int tempo_index, double subbeat);

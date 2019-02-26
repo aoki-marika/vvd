@@ -212,14 +212,14 @@ void load_chart_meshes(Track *track, int buffer_position, int num_chunks)
                      track->speed);
 }
 
-void load_chart_meshes_at_time(Track *track, double time, bool force)
+void load_chart_meshes_at_subbeat(Track *track, double subbeat, bool force)
 {
-    // get the beat of time
-    double time_beat = time_to_subbeat(track->chart, track->tempo_index, time) / CHART_BEAT_SUBBEATS;
+    // convert subbeat to beats
+    double beat = subbeat / CHART_BEAT_SUBBEATS;
 
-    // get the buffer position for time_beat
+    // get the buffer position for beat
     // subtract buffer so buffer position starts at the beginning of the buffer
-    int buffer_position = ceil(time_beat / TRACK_BUFFER_CHUNK_BEATS) - TRACK_EXTRA_BUFFER_CHUNKS;
+    int buffer_position = ceil(beat / TRACK_BUFFER_CHUNK_BEATS) - TRACK_EXTRA_BUFFER_CHUNKS;
 
     // ensure buffer position is always at least zero
     if (buffer_position < 0)
@@ -251,7 +251,7 @@ void track_set_speed(Track *track, double speed)
     load_measure_bars_mesh(track);
 
     // load the chart meshes
-    load_chart_meshes_at_time(track, track->time, true);
+    load_chart_meshes_at_subbeat(track, track->subbeat, true);
 }
 
 void note_beam(int num_lanes,
@@ -334,16 +334,14 @@ void draw_beams(Track *track,
     }
 }
 
-void track_draw(Track *track, int tempo_index, double time)
+void track_draw(Track *track, int tempo_index, double subbeat)
 {
-    // set the given tracks time and tempo index
-    track->time = time;
+    // set the given tracks subbeat and tempo index
+    track->subbeat = subbeat;
     track->tempo_index = tempo_index;
 
-    // todo: should also do a sweep of track and check for anything else that should be moved to playback
-
     // load the chart meshes
-    load_chart_meshes_at_time(track, time, false);
+    load_chart_meshes_at_subbeat(track, subbeat, false);
 
     // create the projection matrix
     mat4_t projection = m4_perspective(90.0f,
@@ -374,8 +372,7 @@ void track_draw(Track *track, int tempo_index, double time)
 
     // scroll the bars and notes
     // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0
-    double time_subbeat = time_to_subbeat(track->chart, track->tempo_index, time);
-    mat4_t scrolled_model = m4_mul(model, m4_translation(vec3(0, -track_subbeat_position(time_subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
+    mat4_t scrolled_model = m4_mul(model, m4_translation(vec3(0, -track_subbeat_position(subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
 
     // draw the measure bars
     program_use(track->measure_bars_program);

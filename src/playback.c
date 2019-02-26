@@ -6,6 +6,7 @@
 #include "scoring.h"
 #include "timing.h"
 #include "screen.h"
+#include "note_utils.h"
 
 Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track, Scoring *scoring)
 {
@@ -250,9 +251,12 @@ bool playback_update(Playback *playback)
     // update the current notes/analogs
     update_current(playback, relative_time);
 
+    // get relative time in subbeats
+    double relative_time_subbeat = time_to_subbeat(playback->chart, playback->tempo_index, relative_time);
+
     // draw the track
-    // draw at time 0 if playback has not started yet so theres no scroll in before starting
-    track_draw(playback->track, playback->tempo_index, (!playback->started) ? 0 : relative_time);
+    // draw at subbeat 0 if playback has not started yet so theres no scroll in before starting
+    track_draw(playback->track, playback->tempo_index, (!playback->started) ? 0 : relative_time_subbeat);
 
     // say playback is not finished
     return false;
