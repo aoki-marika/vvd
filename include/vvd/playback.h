@@ -29,6 +29,9 @@ typedef struct
     // the time, in milliseconds, that this playback should begin playing at
     double start_time;
 
+    // the index of last tempo that this playback reached in charts tempos
+    int tempo_index;
+
     // the indexes of the currents notes and analogs from the last call to playback_update
     int current_bt_notes[CHART_BT_LANES];
     int current_fx_notes[CHART_FX_LANES];

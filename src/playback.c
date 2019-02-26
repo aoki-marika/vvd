@@ -18,6 +18,7 @@ Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track, S
     playback->track = track;
     playback->scoring = scoring;
     playback->started = false;
+    playback->tempo_index = 0;
 
     // default all the current notes/analogs to none
     for (int i = 0; i < CHART_BT_LANES; i++)
@@ -235,12 +236,23 @@ bool playback_update(Playback *playback)
     if (relative_time >= playback->chart->end_time)
         return true;
 
+    // update the given playbacks tempo index
+    for (int i = 0; i < playback->chart->num_tempos; i++)
+    {
+        // break if the current tempo is after relative time
+        if (playback->chart->tempos[i].time > relative_time)
+            break;
+
+        // set the given playbacks tempo index
+        playback->tempo_index = i;
+    }
+
     // update the current notes/analogs
     update_current(playback, relative_time);
 
     // draw the track
     // draw at time 0 if playback has not started yet so theres no scroll in before starting
-    track_draw(playback->track, (!playback->started) ? 0 : relative_time);
+    track_draw(playback->track, playback->tempo_index, (!playback->started) ? 0 : relative_time);
 
     // say playback is not finished
     return false;

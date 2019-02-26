@@ -334,21 +334,13 @@ void draw_beams(Track *track,
     }
 }
 
-void track_draw(Track *track, double time)
+void track_draw(Track *track, int tempo_index, double time)
 {
-    // set the given tracks time
+    // set the given tracks time and tempo index
     track->time = time;
+    track->tempo_index = tempo_index;
 
-    // update the current tempo
-    // todo: current tempo should be handled in playback
     // todo: should also do a sweep of track and check for anything else that should be moved to playback
-    for (int i = 0; i < track->chart->num_tempos; i++)
-    {
-        if (track->chart->tempos[i].time > time)
-            break;
-
-        track->tempo_index = i;
-    }
 
     // load the chart meshes
     load_chart_meshes_at_time(track, time, false);
