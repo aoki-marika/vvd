@@ -2,14 +2,35 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
 
 #define MATH_3D_IMPLEMENTATION
 #include <arkanis/math_3d.h>
 
 #include "screen.h"
+#include "timing.h"
 #include "bt_mesh.h"
 #include "fx_mesh.h"
 #include "note_utils.h"
+#include "interpolate.h"
+
+void create_beam_mesh(Program *program,
+                      Mesh **mesh,
+                      float lane_width)
+{
+    // create the mesh
+    *mesh = mesh_create(MESH_VERTICES_QUAD, program, GL_STATIC_DRAW);
+
+    // set the mesh vertices for one lane
+    // when rendering this lane is moved around and has its state set for each lane
+    mesh_set_vertices_quad(*mesh,
+                           0,
+                           lane_width,
+                           TRACK_LENGTH,
+                           vec3(-TRACK_NOTES_WIDTH / 2,
+                                -TRACK_LENGTH / 2,
+                                0));
+}
 
 Track *track_create(Chart *chart)
 {
@@ -20,6 +41,15 @@ Track *track_create(Chart *chart)
     track->chart = chart;
     track->tempo_index = 0;
     track->buffer_position = -1;
+
+    // default the beam times so they arent triggered when the track is loaded
+    double hidden_time = time_milliseconds() - TRACK_BEAM_DURATION;
+
+    for (int i = 0; i < CHART_BT_LANES; i++)
+        track->bt_beam_states[i].time = hidden_time;
+
+    for (int i = 0; i < CHART_FX_LANES; i++)
+        track->fx_beam_states[i].time = hidden_time;
 
     // create the lane program and mesh
     track->lane_program = program_create("lane.vs", "lane.fs", true);
@@ -59,6 +89,21 @@ Track *track_create(Chart *chart)
     track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
     track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * chart->num_measures, track->measure_bars_program, GL_DYNAMIC_DRAW);
 
+    // create the beam program
+    track->beam_program = program_create("beam.vs", "beam.fs", true);
+    track->uniform_beam_judgement_id = program_get_uniform_id(track->beam_program, "judgement");
+    track->uniform_beam_alpha_id = program_get_uniform_id(track->beam_program, "alpha");
+
+    // create the bt beam mesh
+    create_beam_mesh(track->beam_program,
+                     &track->bt_beam_mesh,
+                     TRACK_BT_WIDTH);
+
+    // create the fx beam mesh
+    create_beam_mesh(track->beam_program,
+                     &track->fx_beam_mesh,
+                     TRACK_FX_WIDTH);
+
     // create the bt, fx, and analog meshes
     track->bt_mesh = bt_mesh_create();
     track->fx_mesh = fx_mesh_create();
@@ -73,10 +118,13 @@ void track_free(Track *track)
     // free all the programs
     program_free(track->lane_program);
     program_free(track->measure_bars_program);
+    program_free(track->beam_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
     mesh_free(track->measure_bars_mesh);
+    mesh_free(track->bt_beam_mesh);
+    mesh_free(track->fx_beam_mesh);
 
     // free all the note/analog meshes
     note_mesh_free(track->bt_mesh);
@@ -206,12 +254,94 @@ void track_set_speed(Track *track, double speed)
     load_chart_meshes_at_time(track, track->time, true);
 }
 
+void note_beam(int num_lanes,
+               BeamState states[num_lanes],
+               int lane,
+               Judgement judgement)
+{
+    // assert that lane is valid
+    assert(lane >= 0 && lane < num_lanes);
+
+    // set the beam state for the given lanes properties
+    BeamState *state = &states[lane];
+    state->judgement = judgement;
+    state->time = time_milliseconds();
+}
+
+void track_bt_beam(Track *track, int lane, Judgement judgement)
+{
+    // set the beam for the given lanes properties
+    note_beam(CHART_BT_LANES,
+              track->bt_beam_states,
+              lane,
+              judgement);
+}
+
+void track_fx_beam(Track *track, int lane, Judgement judgement)
+{
+    // set the beam for the given lanes properties
+    note_beam(CHART_FX_LANES,
+              track->fx_beam_states,
+              lane,
+              judgement);
+}
+
+void draw_beams(Track *track,
+                int num_lanes,
+                BeamState states[num_lanes],
+                mat4_t projection,
+                mat4_t view,
+                mat4_t model,
+                Mesh *mesh,
+                float lane_width,
+                double start_alpha)
+{
+    // use the beam program
+    program_use(track->beam_program);
+
+    // get the current time in milliseconds
+    double time = time_milliseconds();
+
+    // for each lane
+    for (int i = 0; i < num_lanes; i++)
+    {
+        // get the current lanes beams state
+        BeamState *state = &states[i];
+
+        // only draw the beam if its animation is still occurring
+        if (state->time + TRACK_BEAM_DURATION >= time)
+        {
+            // get the current beams current alpha
+            double current_alpha = interpolate(time,
+                                               state->time,
+                                               state->time + TRACK_BEAM_DURATION,
+                                               start_alpha,
+                                               0);
+
+            // set the shaders properties
+            glUniform1i(track->uniform_beam_judgement_id, state->judgement);
+            glUniform1f(track->uniform_beam_alpha_id, current_alpha);
+
+            // set the programs matrices
+            program_set_matrices(track->beam_program, projection, view, model);
+
+            // draw the current beam
+            mesh_draw_all(mesh);
+        }
+
+        // move the model matrix for the next beam
+        model = m4_mul(model, m4_translation(vec3(-lane_width, 0, 0)));
+    }
+}
+
 void track_draw(Track *track, double time)
 {
     // set the given tracks time
     track->time = time;
 
     // update the current tempo
+    // todo: current tempo should be handled in playback
+    // todo: should also do a sweep of track and check for anything else that should be moved to playback
     for (int i = 0; i < track->chart->num_tempos; i++)
     {
         if (track->chart->tempos[i].time > time)
@@ -244,7 +374,7 @@ void track_draw(Track *track, double time)
     program_use(track->lane_program);
     program_set_matrices(track->lane_program, projection, view, model);
 
-    for (int i = 0; i < CHART_ANALOG_LANES + 1; i++)
+    for (int i = 0; i < 1 + CHART_ANALOG_LANES; i++)
     {
         glUniform1i(track->uniform_lane_lane_id, i);
         mesh_draw(track->lane_mesh, i * MESH_VERTICES_QUAD, MESH_VERTICES_QUAD);
@@ -253,17 +383,39 @@ void track_draw(Track *track, double time)
     // scroll the bars and notes
     // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0
     double time_subbeat = time_to_subbeat(track->chart, track->tempo_index, time);
-    model = m4_mul(model, m4_translation(vec3(0, -track_subbeat_position(time_subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
+    mat4_t scrolled_model = m4_mul(model, m4_translation(vec3(0, -track_subbeat_position(time_subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
 
     // draw the measure bars
     program_use(track->measure_bars_program);
-    program_set_matrices(track->measure_bars_program, projection, view, model);
+    program_set_matrices(track->measure_bars_program, projection, view, scrolled_model);
     mesh_draw_all(track->measure_bars_mesh);
 
+    // draw the bt beams
+    draw_beams(track,
+               CHART_BT_LANES,
+               track->bt_beam_states,
+               projection,
+               view,
+               model,
+               track->bt_beam_mesh,
+               TRACK_BT_WIDTH,
+               TRACK_BT_BEAM_ALPHA);
+
+    // draw the fx beams
+    draw_beams(track,
+               CHART_FX_LANES,
+               track->fx_beam_states,
+               projection,
+               view,
+               model,
+               track->fx_beam_mesh,
+               TRACK_FX_WIDTH,
+               TRACK_FX_BEAM_ALPHA);
+
     // draw all the notes and analogs in order
-    note_mesh_draw_holds(track->fx_mesh, projection, view, model); //fx holds
-    note_mesh_draw_holds(track->bt_mesh, projection, view, model); //bt holds
-    analog_mesh_draw(track->analog_mesh, projection, view, model); //analogs
-    note_mesh_draw_chips(track->fx_mesh, projection, view, model); //fx chips
-    note_mesh_draw_chips(track->bt_mesh, projection, view, model); //bt chips
+    note_mesh_draw_holds(track->fx_mesh, projection, view, scrolled_model); //fx holds
+    note_mesh_draw_holds(track->bt_mesh, projection, view, scrolled_model); //bt holds
+    analog_mesh_draw(track->analog_mesh, projection, view, scrolled_model); //analogs
+    note_mesh_draw_chips(track->fx_mesh, projection, view, scrolled_model); //fx chips
+    note_mesh_draw_chips(track->bt_mesh, projection, view, scrolled_model); //bt chip
 }

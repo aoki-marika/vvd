@@ -1,5 +1,6 @@
 #pragma once
 
+#include "judgement.h"
 #include "chart.h"
 #include "program.h"
 #include "mesh.h"
@@ -26,6 +27,19 @@
 #define TRACK_BEAT_SPEED 8
 
 //
+// BEAM
+//
+
+// the time in milliseconds for a beam to fade out after triggering
+#define TRACK_BEAM_DURATION 100
+
+// the alpha of a bt beam when its triggered
+#define TRACK_BT_BEAM_ALPHA 0.5
+
+// the alpha of an beam when its triggered
+#define TRACK_FX_BEAM_ALPHA 0.125
+
+//
 // CAMERA
 //
 
@@ -47,7 +61,7 @@
 #define TRACK_EXTRA_BUFFER_CHUNKS 2
 
 //
-// NOTES AND BARS
+// NOTES, ANALOGS, AND BARS
 //
 
 // the height of a measure or beat bar on the track
@@ -60,12 +74,24 @@
 // the width of a bt note on the track
 #define TRACK_BT_WIDTH TRACK_NOTES_WIDTH / CHART_BT_LANES
 
+// the width of an fx note on the track
+#define TRACK_FX_WIDTH TRACK_BT_WIDTH * (CHART_BT_LANES / CHART_FX_LANES)
+
 // the width of a non-slam analog on the track
 #define TRACK_ANALOG_WIDTH TRACK_GUTTER_WIDTH * 1.1
 
 // the height in subbeats of an analog slam
 // todo: slams seem to resize based on tempo
 #define TRACK_ANALOG_SLAM_SUBBEATS 8
+
+typedef struct
+{
+    // the current judgement of this beam
+    Judgement judgement;
+
+    // the last time that judgement was set on this beam
+    double time;
+} BeamState;
 
 typedef struct
 {
@@ -80,6 +106,18 @@ typedef struct
     // the measure bars program and mesh
     Program *measure_bars_program;
     Mesh *measure_bars_mesh;
+
+    // the beam program
+    Program *beam_program;
+    GLuint uniform_beam_judgement_id;
+    GLuint uniform_beam_alpha_id;
+
+    // the bt and fx beam meshes
+    Mesh *bt_beam_mesh, *fx_beam_mesh;
+
+    // the current state of each bt and fx lanes beam
+    BeamState bt_beam_states[CHART_BT_LANES];
+    BeamState fx_beam_states[CHART_FX_LANES];
 
     // the bt, fx, and analog meshes of this track
     NoteMesh *bt_mesh, *fx_mesh;
@@ -106,6 +144,10 @@ float track_subbeat_position(double subbeat, double speed);
 
 // set the given tracks scroll speed
 void track_set_speed(Track *track, double speed);
+
+// trigger the bt/fx beam on the given lane with the given judgement
+void track_bt_beam(Track *track, int lane, Judgement judgement);
+void track_fx_beam(Track *track, int lane, Judgement judgement);
 
 // draw the given tracks state at the given time in milliseconds
 void track_draw(Track *track, double time);
