@@ -16,7 +16,7 @@ void fx_mesh_load(NoteMesh *mesh, Chart *chart, uint16_t start_subbeat, uint16_t
                    CHART_FX_LANES,
                    chart->num_fx_notes,
                    chart->fx_notes,
-                   TRACK_BT_WIDTH * (CHART_BT_LANES / CHART_FX_LANES),
+                   TRACK_FX_WIDTH,
                    start_subbeat,
                    end_subbeat,
                    speed);

@@ -7,6 +7,7 @@
 #define SCREEN_WIDTH 720
 #define SCREEN_HEIGHT 1280
 #define SCREEN_RATE 60
+#define SCREEN_FRAME_DURATION 1000.0 / SCREEN_RATE
 
 typedef struct
 {

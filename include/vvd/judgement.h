@@ -12,6 +12,7 @@
 
 typedef enum
 {
+    JudgementNone,
     JudgementCritical,
     JudgementNear,
     JudgementError,
