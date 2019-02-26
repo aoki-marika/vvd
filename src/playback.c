@@ -2,21 +2,12 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <sys/time.h>
 
 #include "scoring.h"
+#include "timing.h"
+#include "screen.h"
 
-double current_milliseconds()
-{
-    // get the current time of day
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-
-    // convert tv_sec and tv_usec to ms and return
-    return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-}
-
-Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track)
+Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track, Scoring *scoring)
 {
     // create the playback
     Playback *playback = malloc(sizeof(Playback));
@@ -25,7 +16,21 @@ Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track)
     playback->chart = chart;
     playback->audio_track = audio_track;
     playback->track = track;
+    playback->scoring = scoring;
     playback->started = false;
+
+    // default all the current notes/analogs to none
+    for (int i = 0; i < CHART_BT_LANES; i++)
+        playback->current_bt_notes[i] = PLAYBACK_CURRENT_NONE;
+
+    for (int i = 0; i < CHART_FX_LANES; i++)
+        playback->current_fx_notes[i] = PLAYBACK_CURRENT_NONE;
+
+    for (int i = 0; i < CHART_ANALOG_LANES; i++)
+    {
+        playback->current_analogs[i] = PLAYBACK_CURRENT_NONE;
+        playback->current_analogs_points[i] = PLAYBACK_CURRENT_NONE;
+    }
 
     // return the playback
     return playback;
@@ -39,7 +44,7 @@ void playback_free(Playback *playback)
 void playback_start(Playback *playback, double delay)
 {
     // set the playbacks start time
-    playback->start_time = current_milliseconds() + delay;
+    playback->start_time = time_milliseconds() + delay;
 }
 
 void update_current_notes(int num_lanes,
@@ -61,11 +66,11 @@ void update_current_notes(int num_lanes,
             bool in_range = false;
 
             if (note->hold)
-                in_range = (time >= note->start_time) &&
-                           (time <= note->end_time);
+                in_range = (time >= note->start_time - JUDGEMENT_ERROR_WINDOW) &&
+                           (time <= note->end_time + JUDGEMENT_ERROR_WINDOW);
             else
-                in_range = (time >= note->start_time - SCORING_ERROR_WINDOW) &&
-                           (time <= note->start_time + SCORING_ERROR_WINDOW);
+                in_range = (time >= note->start_time - JUDGEMENT_ERROR_WINDOW) &&
+                           (time <= note->start_time + JUDGEMENT_ERROR_WINDOW);
 
             // set the current lanes current note if the current note is in range
             if (in_range)
@@ -74,7 +79,7 @@ void update_current_notes(int num_lanes,
                 break;
             }
             // break if the current note is after time, as no notes afterwards can be in range
-            else if (note->start_time + SCORING_ERROR_WINDOW > time)
+            else if (note->start_time + JUDGEMENT_ERROR_WINDOW > time)
             {
                 break;
             }
@@ -106,8 +111,8 @@ void update_current_analogs(Playback *playback, double time)
                 bool in_range = false;
 
                 if (end_point->slam)
-                    in_range = (time >= start_point->time - SCORING_ANALOG_SLAM_WINDOW) &&
-                               (time <= end_point->time + SCORING_ANALOG_SLAM_WINDOW);
+                    in_range = (time >= start_point->time - JUDGEMENT_ANALOG_SLAM_WINDOW) &&
+                               (time <= end_point->time + JUDGEMENT_ANALOG_SLAM_WINDOW);
                 else
                     in_range = (time >= start_point->time) &&
                                (time <= end_point->time);
@@ -135,8 +140,48 @@ void update_current_analogs(Playback *playback, double time)
     }
 }
 
+void send_current_notes_events(Scoring *scoring,
+                               int num_lanes,
+                               int last_notes[num_lanes],
+                               int current_notes[num_lanes],
+                               Judgement (* scoring_note_passed)(Scoring *, int, int),
+                               void (* scoring_note_current)(Scoring *, int, int))
+{
+    // check for changes between the last and current notes
+    for (int i = 0; i < num_lanes; i++)
+    {
+        // get the current and last notes
+        int current = current_notes[i];
+        int last = last_notes[i];
+
+        // if the current note changed
+        if (current != last)
+        {
+            // pass the current events
+            // only pass an event if it has a note
+
+            if (last != PLAYBACK_CURRENT_NONE)
+                // todo: show the judgement on the critical line
+                scoring_note_passed(scoring, i, last);
+
+            if (current != PLAYBACK_CURRENT_NONE)
+                scoring_note_current(scoring, i, current);
+        }
+    }
+}
+
 void update_current(Playback *playback, double time)
 {
+    // store the last notes to compare against the current
+    int last_bt_notes[CHART_BT_LANES];
+    int last_fx_notes[CHART_FX_LANES];
+
+    for (int i = 0; i < CHART_BT_LANES; i++)
+        last_bt_notes[i] = playback->current_bt_notes[i];
+
+    for (int i = 0; i < CHART_FX_LANES; i++)
+        last_fx_notes[i] = playback->current_fx_notes[i];
+
     // update the current bt notes
     update_current_notes(CHART_BT_LANES,
                          playback->chart->num_bt_notes,
@@ -153,12 +198,28 @@ void update_current(Playback *playback, double time)
 
     // update the current analogs
     update_current_analogs(playback, time);
+
+    // send the current bt notes events
+    send_current_notes_events(playback->scoring,
+                              CHART_BT_LANES,
+                              last_bt_notes,
+                              playback->current_bt_notes,
+                              scoring_bt_note_passed,
+                              scoring_bt_note_current);
+
+    // send the current fx notes events
+    send_current_notes_events(playback->scoring,
+                              CHART_FX_LANES,
+                              last_fx_notes,
+                              playback->current_fx_notes,
+                              scoring_fx_note_passed,
+                              scoring_fx_note_current);
 }
 
 bool playback_update(Playback *playback)
 {
     // get the current time, relative to start_time
-    double relative_time = current_milliseconds() - playback->start_time;
+    double relative_time = time_milliseconds() - playback->start_time;
 
     // if playback has not yet started and time is past the start time
     if (!playback->started && relative_time >= 0)
@@ -183,4 +244,60 @@ bool playback_update(Playback *playback)
 
     // say playback is not finished
     return false;
+}
+
+void playback_note_state_changed(Playback *playback,
+                                 int num_lanes,
+                                 Note *notes[num_lanes],
+                                 int current_notes[num_lanes],
+                                 int lane,
+                                 bool pressed,
+                                 Judgement (* scoring_state_changed)(Scoring *scoring, int, bool, double),
+                                 void (* track_beam)(Track *, int, Judgement))
+{
+    // assert that lane is valid
+    assert(lane >= 0 && lane < num_lanes);
+
+    // get the current time relative to the given playbacks starts time
+    double relative_time = time_milliseconds() - playback->start_time;
+
+    // pass the event to the given method
+    Judgement judgement = scoring_state_changed(playback->scoring, lane, pressed, relative_time);
+
+    // show the beam for the judgement if its not none
+    if (judgement != JudgementNone)
+        track_beam(playback->track, lane, judgement);
+    // show an error beam if the given state is pressed and judgement was none, and theres no current note or hold
+    // this is to replicate sdvx in showing beams when pressing buttons without notes
+    // todo: is the no note beam in sdvx the same as the error beam?
+    else if (pressed &&
+             judgement == JudgementNone &&
+             (current_notes[lane] == PLAYBACK_CURRENT_NONE || !notes[lane][current_notes[lane]].hold))
+        track_beam(playback->track, lane, JudgementError);
+}
+
+void playback_bt_state_changed(Playback *playback, int lane, bool pressed)
+{
+    // process the given event
+    playback_note_state_changed(playback,
+                                CHART_BT_LANES,
+                                playback->chart->bt_notes,
+                                playback->current_bt_notes,
+                                lane,
+                                pressed,
+                                scoring_bt_state_changed,
+                                track_bt_beam);
+}
+
+void playback_fx_state_changed(Playback *playback, int lane, bool pressed)
+{
+    // process the given event
+    playback_note_state_changed(playback,
+                                CHART_FX_LANES,
+                                playback->chart->fx_notes,
+                                playback->current_fx_notes,
+                                lane,
+                                pressed,
+                                scoring_fx_state_changed,
+                                track_fx_beam);
 }
