@@ -28,6 +28,13 @@ typedef struct
 Scoring *scoring_create(Chart *chart);
 void scoring_free(Scoring *scoring);
 
+// tell the given scoring that the given bt/fx note in the given lane has passed its maximum hit window after being current
+// should always be called before scoring_[bt/fx]_note_current
+// returns the judgement, if any, for the passed note on the given lane at the given index
+// chips return a JudgementError if it was not judged before passing its maximum timing window
+Judgement scoring_bt_note_passed(Scoring *scoring, int lane, int index);
+Judgement scoring_fx_note_passed(Scoring *scoring, int lane, int index);
+
 // tell the given scoring that the given bt/fx note in the given lane has become current
 void scoring_bt_note_current(Scoring *scoring, int lane, int index);
 void scoring_fx_note_current(Scoring *scoring, int lane, int index);

@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include "interpolate.h"
+
 uint16_t note_time_at_beat_to_subbeat(Beat *note_beat, uint16_t measure, uint8_t beat, uint8_t subbeat)
 {
     // calculate the difference in subbeats between note_beat and the given note time
@@ -78,9 +80,6 @@ double time_to_subbeat(Chart *chart, int tempo_index, double time)
         end_subbeat = chart->end_subbeat;
     }
 
-    // calculate the percentage between start_time and end_time time is at
-    float time_percentage = (time - start_time) / (end_time - start_time);
-
-    // calculate and return the subbeat of time by multiplying the difference between start_subbeat and end_subbeat and offsetting it by start_subbeat
-    return start_subbeat + ((end_subbeat - start_subbeat)  * time_percentage);
+    // return the subbeat at time between start_subbeat and end_subbeat
+    return interpolate(time, start_time, end_time, start_subbeat, end_subbeat);
 }
