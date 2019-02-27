@@ -8,6 +8,18 @@
 
 typedef struct
 {
+    // the number of note lanes in this mesh
+    int num_lanes;
+
+    // the number of notes of each lane for this mesh
+    int *num_notes;
+
+    // the notes of each lane for this mesh
+    Note **notes;
+
+    // the width of a note in this mesh
+    float note_width;
+
     // the programs and meshes for chips and holds of this mesh
     Program *chips_program, *holds_program;
     Mesh *chips_mesh, *holds_mesh;
@@ -16,18 +28,17 @@ typedef struct
     int chips_size, holds_size;
 } NoteMesh;
 
-NoteMesh *note_mesh_create(const char *type_name, int num_lanes);
+// create a note mesh for the given type and notes
+NoteMesh *note_mesh_create(const char *type_name,
+                           int num_lanes,
+                           int num_notes[num_lanes],
+                           Note *notes[num_lanes],
+                           float note_width);
+
 void note_mesh_free(NoteMesh *mesh);
 
-// load the note vertices for the given notes that are in range of start_subbeat to end_subbeat into the given mesh
-void note_mesh_load(NoteMesh *mesh,
-                    int num_lanes,
-                    int num_notes[num_lanes],
-                    Note *notes[num_lanes],
-                    float note_width,
-                    uint16_t start_subbeat,
-                    uint16_t end_subbeat,
-                    double speed);
+// load the note vertices of the given mesh that are between start_subbeat and end_subbeat into the given mesh
+void note_mesh_load(NoteMesh *mesh, uint16_t start_subbeat,uint16_t end_subbeat, double speed);
 
 // draw the given meshes holds with the given projection, view, and model matrices
 void note_mesh_draw_holds(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t model);

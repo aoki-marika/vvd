@@ -6,10 +6,19 @@
 #include "track.h"
 
 NoteMesh *note_mesh_create(const char *type_name,
-                           int num_lanes)
+                           int num_lanes,
+                           int num_notes[num_lanes],
+                           Note *notes[num_lanes],
+                           float note_width)
 {
     // create the note mesh
     NoteMesh *mesh = malloc(sizeof(NoteMesh));
+
+    // set the meshes properties
+    mesh->num_lanes = num_lanes;
+    mesh->num_notes = num_notes;
+    mesh->notes = notes;
+    mesh->note_width = note_width;
 
     // create the chip program
     char chip_vertex_path[PATH_MAX];
@@ -60,10 +69,6 @@ void note_mesh_free(NoteMesh *mesh)
 }
 
 void note_mesh_load(NoteMesh *mesh,
-                    int num_lanes,
-                    int num_notes[num_lanes],
-                    Note *notes[num_lanes],
-                    float note_width,
                     uint16_t start_subbeat,
                     uint16_t end_subbeat,
                     double speed)
@@ -72,11 +77,11 @@ void note_mesh_load(NoteMesh *mesh,
     int chip_vertices_index = 0;
     int hold_vertices_index = 0;
 
-    for (int l = 0; l < num_lanes; l++)
+    for (int l = 0; l < mesh->num_lanes; l++)
     {
-        for (int n = 0; n < num_notes[l]; n++)
+        for (int n = 0; n < mesh->num_notes[l]; n++)
         {
-            Note *note = &notes[l][n];
+            Note *note = &mesh->notes[l][n];
 
             // skip notes that are before start_subbeat
             if (((note->hold) ? note->end_subbeat : note->start_subbeat) < start_subbeat)
@@ -88,13 +93,12 @@ void note_mesh_load(NoteMesh *mesh,
                 break;
 
             // calculate the position of this note
-            vec3_t position = vec3((l * note_width) - (TRACK_NOTES_WIDTH / 2),
+            vec3_t position = vec3((l * mesh->note_width) - (TRACK_NOTES_WIDTH / 2),
                                    track_subbeat_position(note->start_subbeat, speed),
                                    0);
 
             // calculate the size of the note
-            // todo: should resize height based on speed
-            vec3_t size = vec3(note_width,
+            vec3_t size = vec3(mesh->note_width,
                                TRACK_CHIP_HEIGHT,
                                0);
 

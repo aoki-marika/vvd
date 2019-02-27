@@ -2,10 +2,13 @@
 
 #include "track.h"
 
-AnalogMesh *analog_mesh_create()
+AnalogMesh *analog_mesh_create(Chart *chart)
 {
     // create the mesh
     AnalogMesh *mesh = malloc(sizeof(AnalogMesh));
+
+    // set the meshes properties
+    mesh->chart = chart;
 
     // create the program
     mesh->program = program_create("analog.vs", "analog.fs", true);
@@ -124,7 +127,7 @@ void create_slam_vertices(Mesh *mesh,
     }
 }
 
-void analog_mesh_load(AnalogMesh *mesh, Chart *chart, uint16_t start_subbeat, uint16_t end_subbeat, double speed)
+void analog_mesh_load(AnalogMesh *mesh, uint16_t start_subbeat, uint16_t end_subbeat, double speed)
 {
     for (int l = 0; l < CHART_ANALOG_LANES; l++)
     {
@@ -134,9 +137,9 @@ void analog_mesh_load(AnalogMesh *mesh, Chart *chart, uint16_t start_subbeat, ui
         // the offset for the current segments vertices
         int vertices_index = 0;
 
-        for (int a = 0; a < chart->num_analogs[l]; a++)
+        for (int a = 0; a < mesh->chart->num_analogs[l]; a++)
         {
-            Analog *analog = &chart->analogs[l][a];
+            Analog *analog = &mesh->chart->analogs[l][a];
 
             // whether or not this lane is finished creating segment vertices
             bool lane_finished = false;

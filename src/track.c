@@ -105,9 +105,9 @@ Track *track_create(Chart *chart)
                      TRACK_FX_WIDTH);
 
     // create the bt, fx, and analog meshes
-    track->bt_mesh = bt_mesh_create();
-    track->fx_mesh = fx_mesh_create();
-    track->analog_mesh = analog_mesh_create();
+    track->bt_mesh = bt_mesh_create(chart);
+    track->fx_mesh = fx_mesh_create(chart);
+    track->analog_mesh = analog_mesh_create(chart);
 
     // return the track
     return track;
@@ -190,26 +190,10 @@ void load_chart_meshes(Track *track, int buffer_position, int num_chunks)
     uint16_t start_subbeat = buffer_position * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
     uint16_t end_subbeat = (buffer_position + num_chunks) * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
 
-    // load the notes for the bt mesh
-    bt_mesh_load(track->bt_mesh,
-                 track->chart,
-                 start_subbeat,
-                 end_subbeat,
-                 track->speed);
-
-    // load the notes for the fx mesh
-    fx_mesh_load(track->fx_mesh,
-                 track->chart,
-                 start_subbeat,
-                 end_subbeat,
-                 track->speed);
-
-    // load the analogs for the analog mesh
-    analog_mesh_load(track->analog_mesh,
-                     track->chart,
-                     start_subbeat,
-                     end_subbeat,
-                     track->speed);
+    // load the bt, fx, and analog meshes
+    note_mesh_load(track->bt_mesh, start_subbeat, end_subbeat, track->speed);
+    note_mesh_load(track->fx_mesh, start_subbeat, end_subbeat, track->speed);
+    analog_mesh_load(track->analog_mesh, start_subbeat, end_subbeat, track->speed);
 }
 
 void load_chart_meshes_at_subbeat(Track *track, double subbeat, bool force)
