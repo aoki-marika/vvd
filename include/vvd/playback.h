@@ -5,6 +5,12 @@
 #include "track.h"
 #include "scoring.h"
 
+// the size in subbeats of a tick
+#define PLAYBACK_TICK_SIZE 12
+
+// if the current tempo is >= this value, then the tick size should double, halving the tick rate
+#define PLAYBACK_HALF_TICK_RATE_BPM 256
+
 // the value used to signify that there is no current note/analog in a playbacks current_* array
 #define PLAYBACK_CURRENT_NONE -1
 
@@ -28,6 +34,9 @@ typedef struct
 
     // the time, in milliseconds, that this playback should begin playing at
     double start_time;
+
+    // the last tick this playback was updated at
+    int last_tick;
 
     // the index of last tempo that this playback reached in charts tempos
     int tempo_index;

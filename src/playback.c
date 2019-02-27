@@ -218,6 +218,36 @@ void update_current(Playback *playback, double time)
                               scoring_fx_note_current);
 }
 
+void playback_tick(Playback *playback, double subbeat)
+{
+    // get the tick size for the current tempo
+    int tick_size = PLAYBACK_TICK_SIZE;
+    if (playback->chart->tempos[playback->tempo_index].bpm >= PLAYBACK_HALF_TICK_RATE_BPM)
+        tick_size *= 2;
+
+    // get the current tick
+    int tick = floor(subbeat / tick_size);
+
+    // if the current tick has changed since the last update
+    if (tick != playback->last_tick)
+    {
+        Judgement bt_hold_judgements[CHART_BT_LANES];
+        Judgement fx_hold_judgements[CHART_FX_LANES];
+
+        // tick the given playbacks scoring
+        scoring_tick_changed(playback->scoring,
+                             tick,
+                             tick * tick_size,
+                             bt_hold_judgements,
+                             fx_hold_judgements);
+
+        // todo: process tick judgements
+    }
+
+    // set the given playbacks last tick
+    playback->last_tick = tick;
+}
+
 bool playback_update(Playback *playback)
 {
     // get the current time, relative to start_time
@@ -254,6 +284,9 @@ bool playback_update(Playback *playback)
     // get relative time in subbeats
     double relative_time_subbeat = time_to_subbeat(playback->chart, playback->tempo_index, relative_time);
 
+    // tick the given playback
+    playback_tick(playback, relative_time_subbeat);
+
     // draw the track
     // draw at subbeat 0 if playback has not started yet so theres no scroll in before starting
     track_draw(playback->track, playback->tempo_index, (!playback->started) ? 0 : relative_time_subbeat);
@@ -285,11 +318,11 @@ void playback_note_state_changed(Playback *playback,
         track_beam(playback->track, lane, judgement);
     // show an error beam if the given state is pressed and judgement was none, and theres no current note or hold
     // this is to replicate sdvx in showing beams when pressing buttons without notes
-    // todo: is the no note beam in sdvx the same as the error beam?
     else if (pressed &&
              judgement == JudgementNone &&
              (current_notes[lane] == PLAYBACK_CURRENT_NONE || !notes[lane][current_notes[lane]].hold))
         track_beam(playback->track, lane, JudgementError);
+    // todo: if the state is pressed and the current note is a hold, this is where hold active/inactive state should be set
 }
 
 void playback_bt_state_changed(Playback *playback, int lane, bool pressed)
