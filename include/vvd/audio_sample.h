@@ -4,7 +4,7 @@
 
 typedef struct
 {
-	HSAMPLE sample;
+    HSAMPLE sample;
 } AudioSample;
 
 AudioSample *audio_sample_create(const char *path);

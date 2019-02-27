@@ -4,7 +4,7 @@
 
 typedef struct
 {
-	HSTREAM stream;
+    HSTREAM stream;
 } AudioTrack;
 
 AudioTrack *audio_track_create(const char *path);

@@ -207,9 +207,9 @@ void tick_holds(int num_lanes,
         {
             Note *note = current_notes[i];
 
-			// skip if the current note is a chip
-			if (!note->hold)
-				continue;
+            // skip if the current note is a chip
+            if (!note->hold)
+                continue;
 
             // todo: the tick count for the ending double fx holds of speedstar is 1 extra (7 instead of 6)
             // cant tell if vvd is ticking faster or if sdvx has a bug/"feature" that ending holds skip their second last tick

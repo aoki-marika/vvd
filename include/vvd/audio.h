@@ -2,7 +2,7 @@
 
 typedef struct
 {
-	int device;
+    int device;
 } Audio;
 
 // note that this must be called before any samples or tracks are loaded and/or played
