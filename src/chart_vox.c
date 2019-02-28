@@ -266,6 +266,7 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                     // create a new analog and set the building analog to it
                     Analog *analog = malloc(sizeof(Analog));
                     analog->num_points = 0;
+                    analog->points = malloc(CHART_ANALOG_POINTS_MAX * sizeof(AnalogPoint));
                     state->building_analogs[lane] = analog;
                 }
 
@@ -301,8 +302,17 @@ void parse_data_line(Chart *chart, VoxParsingState *state, char *line)
                     point.slam = point.subbeat == previous_point->subbeat;
                 }
 
-                // append the point to the current building analogs points
+                // get the current building analog
                 Analog *analog = state->building_analogs[lane];
+
+                // resize the analogs points if the next point is going to exceed its allocated size
+                int before_size = (analog->num_points / CHART_ANALOG_POINTS_MAX) + 1;
+                int after_size = ((analog->num_points + 1) / CHART_ANALOG_POINTS_MAX) + 1;
+
+                if (after_size > before_size)
+                    analog->points = realloc(analog->points, after_size * CHART_ANALOG_POINTS_MAX * sizeof(AnalogPoint));
+
+                // add the current point to the building analog
                 analog->points[analog->num_points] = point;
                 analog->num_points += 1;
 

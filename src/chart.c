@@ -146,8 +146,13 @@ void chart_free(Chart *chart)
     for (int i = 0; i < CHART_FX_LANES; i++)
         free(chart->fx_notes[i]);
 
-    for (int i = 0; i < CHART_ANALOG_LANES; i++)
-        free(chart->analogs[i]);
+    for (int l = 0; l < CHART_ANALOG_LANES; l++)
+    {
+        for (int a = 0; a < chart->num_analogs[l]; a++)
+            free(chart->analogs[l][a].points);
+
+        free(chart->analogs[l]);
+    }
 
     // free the chart
     free(chart);

@@ -7,7 +7,7 @@
 #define CHART_STR_MAX 1024
 #define CHART_EVENTS_MAX 256
 #define CHART_NOTES_MAX 1024
-#define CHART_ANALOG_POINTS_MAX 128
+#define CHART_ANALOG_POINTS_MAX 16
 
 // number of lanes per note type
 #define CHART_BT_LANES 4
@@ -91,7 +91,7 @@ typedef struct
 {
     // the points of this analog
     int num_points;
-    AnalogPoint points[CHART_ANALOG_POINTS_MAX];
+    AnalogPoint *points;
 } Analog;
 
 typedef struct
