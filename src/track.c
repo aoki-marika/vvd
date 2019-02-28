@@ -366,6 +366,9 @@ void track_draw(Track *track, int tempo_index, double subbeat)
     program_set_matrices(track->measure_bars_program, projection, view, scrolled_model);
     mesh_draw_all(track->measure_bars_mesh);
 
+    // normal blending for beams
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // draw the bt beams
     draw_beams(track,
                CHART_BT_LANES,
