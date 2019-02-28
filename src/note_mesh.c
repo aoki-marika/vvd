@@ -160,10 +160,6 @@ void note_mesh_load(NoteMesh *mesh,
                 chip_vertices_index += NOTE_MESH_CHIP_SIZE;
         }
     }
-
-    // set the meshes chips and holds sizes
-    mesh->chips_size = chip_vertices_index;
-    mesh->holds_size = hold_vertices_index;
 }
 
 void note_mesh_remove_chip(NoteMesh *mesh, int lane, int index)

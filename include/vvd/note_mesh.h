@@ -41,9 +41,6 @@ typedef struct
     GLuint uniform_holds_state_id;
     Mesh *chips_mesh, *holds_mesh;
 
-    // the current size of the vertices in the chips and holds meshes, respectively
-    int chips_size, holds_size;
-
     // the index of and size of the currently loaded notes for each lane in notes
     int *loaded_notes_index;
     int *loaded_notes_size;
