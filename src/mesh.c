@@ -39,10 +39,9 @@ void mesh_set_vertices(Mesh *mesh, int index, const GLfloat *vertices, size_t ve
 
 void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height, vec3_t position)
 {
-    // calculate the vertice positions
-    mat4_t model = m4_identity();
-    vec3_t start_position = m4_mul_pos(model, vec3(-position.x, position.y, position.z));
-    vec3_t end_position = m4_mul_pos(model, vec3(-position.x - width, position.y + height, position.z));
+    // calculate the vertex positions
+    vec3_t start_position = vec3(-position.x, position.y, position.z);
+    vec3_t end_position = vec3(-position.x - width, position.y + height, position.z);
 
     // generate the quad
     const GLfloat vertices[] =
@@ -62,10 +61,9 @@ void mesh_set_vertices_quad(Mesh *mesh, int index, GLfloat width, GLfloat height
 
 void mesh_set_vertices_quad_edges(Mesh *mesh, int index, GLfloat width, vec3_t start_position, vec3_t end_position)
 {
-    // calculate the vertice positions
-    mat4_t model = m4_identity();
-    vec3_t draw_start_position = m4_mul_pos(model, vec3(-start_position.x, start_position.y, start_position.z));
-    vec3_t draw_end_position = m4_mul_pos(model, vec3(-end_position.x, end_position.y, end_position.z));
+    // calculate the vertex positions
+    vec3_t draw_start_position = vec3(-start_position.x, start_position.y, start_position.z);
+    vec3_t draw_end_position = vec3(-end_position.x, end_position.y, end_position.z);
 
     // generate the quad
     const GLfloat vertices[] =
