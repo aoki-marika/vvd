@@ -21,13 +21,17 @@ NoteMesh *note_mesh_create(const char *type_name,
     mesh->num_notes = num_notes;
     mesh->notes = notes;
     mesh->note_width = note_width;
-    mesh->loaded_notes_index = calloc(num_lanes, sizeof(int));
-    mesh->loaded_notes_size = calloc(num_lanes, sizeof(int));
+    mesh->loaded_notes_index = malloc(num_lanes * sizeof(int));
+    mesh->loaded_notes_size = malloc(num_lanes * sizeof(int));
     mesh->chips_removed = calloc(num_lanes, sizeof(bool *));
+    mesh->current_hold_indexes = malloc(num_lanes * sizeof(int));
+    mesh->current_hold_states = malloc(num_lanes * sizeof(HoldState));
 
     for (int i = 0; i < num_lanes; i++)
     {
         mesh->chips_removed[i] = calloc(num_notes[i], sizeof(bool));
+        mesh->current_hold_indexes[i] = PLAYBACK_CURRENT_NONE;
+        mesh->current_hold_states[i] = HoldStateDefault;
     }
 
     // create the chip program
@@ -51,6 +55,7 @@ NoteMesh *note_mesh_create(const char *type_name,
     strcat(hold_fragment_path, "_hold.fs");
 
     mesh->holds_program = program_create(hold_vertex_path, hold_fragment_path, true);
+    mesh->uniform_holds_state_id = program_get_uniform_id(mesh->holds_program, "state");
 
     // create the chip and hold meshes
     // todo: this does not need to allocate this much
@@ -68,6 +73,8 @@ void note_mesh_free(NoteMesh *mesh)
     // free all the allocated properties
     free(mesh->loaded_notes_index);
     free(mesh->loaded_notes_size);
+    free(mesh->current_hold_indexes);
+    free(mesh->current_hold_states);
 
     for (int i = 0; i < mesh->num_lanes; i++)
         free(mesh->chips_removed[i]);
@@ -174,6 +181,34 @@ void note_mesh_remove_chip(NoteMesh *mesh, int lane, int index)
     mesh->chips_removed[lane][index] = true;
 }
 
+void note_mesh_set_current_hold(NoteMesh *mesh, int lane, int index)
+{
+    // assert that the lane is valid
+    assert(lane >= 0 && lane < mesh->num_lanes);
+
+    // only assert that the index and note are valid if the index is not none
+    if (index != PLAYBACK_CURRENT_NONE)
+    {
+        // assert that the index is valid
+        assert(index == PLAYBACK_CURRENT_NONE || (index >= 0 && index < mesh->num_notes[lane]));
+
+        // assert that the note is a hold
+        assert(mesh->notes[lane][index].hold);
+    }
+
+    // set the given meshes current hold for the given lane
+    mesh->current_hold_indexes[lane] = index;
+}
+
+void note_mesh_set_current_hold_state(NoteMesh *mesh, int lane, HoldState state)
+{
+    // assert that the lane is valid
+    assert(lane >= 0 && lane < mesh->num_lanes);
+
+    // set the given lanes current hold state
+    mesh->current_hold_states[lane] = state;
+}
+
 void note_mesh_draw_holds(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t model)
 {
     // additive blending for holds
@@ -193,8 +228,19 @@ void note_mesh_draw_holds(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t
             if (!mesh->notes[l][n].hold)
                 continue;
 
+            // apply the current hold state if the current hold is the current hold for the current lane
+            if (mesh->current_hold_indexes[l] == n)
+            {
+                HoldState state = mesh->current_hold_states[l];
+                glUniform1i(mesh->uniform_holds_state_id, state);
+            }
+
             // draw the hold
             mesh_draw_vertices(mesh->holds_mesh, vertices_index, NOTE_MESH_HOLD_SIZE);
+
+            // reset the hold programs state to default if it was changed
+            if (mesh->current_hold_indexes[l] == n)
+                glUniform1i(mesh->uniform_holds_state_id, HoldStateDefault);
 
             // increment the vertices index
             vertices_index += NOTE_MESH_HOLD_SIZE;
