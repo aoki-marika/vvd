@@ -202,6 +202,9 @@ void analog_mesh_draw(AnalogMesh *mesh, mat4_t projection,mat4_t view, mat4_t mo
     for (int i = 0; i < CHART_ANALOG_LANES; i++)
     {
         glUniform1i(mesh->program_lane_id, i);
-        mesh_draw(mesh->lane_meshes[i], 0, mesh->lane_sizes[i]);
+
+        mesh_draw_start(mesh->lane_meshes[i]);
+        mesh_draw_vertices(mesh->lane_meshes[i], 0, mesh->lane_sizes[i]);
+        mesh_draw_end(mesh->lane_meshes[i]);
     }
 }

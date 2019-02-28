@@ -347,12 +347,15 @@ void track_draw(Track *track, int tempo_index, double subbeat)
     // draw the lane
     program_use(track->lane_program);
     program_set_matrices(track->lane_program, projection, view, model);
+    mesh_draw_start(track->lane_mesh);
 
     for (int i = 0; i < 1 + CHART_ANALOG_LANES; i++)
     {
         glUniform1i(track->uniform_lane_lane_id, i);
-        mesh_draw(track->lane_mesh, i * MESH_VERTICES_QUAD, MESH_VERTICES_QUAD);
+        mesh_draw_vertices(track->lane_mesh, i * MESH_VERTICES_QUAD, MESH_VERTICES_QUAD);
     }
+
+    mesh_draw_end(track->lane_mesh);
 
     // scroll the bars and notes
     // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0

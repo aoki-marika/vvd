@@ -83,25 +83,33 @@ void mesh_set_vertices_quad_edges(Mesh *mesh, int index, GLfloat width, vec3_t s
     mesh_set_vertices(mesh, index, vertices, sizeof(vertices));
 }
 
-void mesh_draw(Mesh *mesh, int index, size_t size)
+void mesh_draw_start(Mesh *mesh)
+{
+    // pass the vertex buffer vertices to the meshes program
+    glEnableVertexAttribArray(mesh->attribute_vertex_position_id);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh->vertex_buffer_id);
+    glVertexAttribPointer(mesh->attribute_vertex_position_id, MESH_VERTEX_VALUES, GL_FLOAT, GL_FALSE, 0, NULL);
+}
+
+void mesh_draw_end(Mesh *mesh)
+{
+    // disable the vertex attribute array
+    glDisableVertexAttribArray(mesh->attribute_vertex_position_id);
+}
+
+void mesh_draw_vertices(Mesh *mesh, int index, size_t size)
 {
     // assert that the index and size are valid
     assert(index >= 0 && index < mesh->max_vertices);
     assert(index + size <= mesh->max_vertices);
 
-    // pass the vertex buffer vertices to the mesh program
-    glEnableVertexAttribArray(mesh->attribute_vertex_position_id);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh->vertex_buffer_id);
-    glVertexAttribPointer(mesh->attribute_vertex_position_id, MESH_VERTEX_VALUES, GL_FLOAT, GL_FALSE, 0, NULL);
-
-    // draw the mesh
+    // draw the vertices
     glDrawArrays(GL_TRIANGLES, index, size);
-
-    // disable the vertex attribute array
-    glDisableVertexAttribArray(mesh->attribute_vertex_position_id);
 }
 
 void mesh_draw_all(Mesh *mesh)
 {
-    mesh_draw(mesh, 0, mesh->max_vertices);
+    mesh_draw_start(mesh);
+    mesh_draw_vertices(mesh, 0, mesh->max_vertices);
+    mesh_draw_end(mesh);
 }
