@@ -1,9 +1,11 @@
 #include "note_mesh.h"
 
 #include <string.h>
+#include <assert.h>
 #include <linux/limits.h>
 
 #include "track.h"
+#include "playback.h"
 
 NoteMesh *note_mesh_create(const char *type_name,
                            int num_lanes,
@@ -19,6 +21,8 @@ NoteMesh *note_mesh_create(const char *type_name,
     mesh->num_notes = num_notes;
     mesh->notes = notes;
     mesh->note_width = note_width;
+    mesh->loaded_notes_index = calloc(num_lanes, sizeof(int));
+    mesh->loaded_notes_size = calloc(num_lanes, sizeof(int));
 
     // create the chip program
     char chip_vertex_path[PATH_MAX];
@@ -45,10 +49,9 @@ NoteMesh *note_mesh_create(const char *type_name,
     // create the chip and hold meshes
     // todo: this does not need to allocate this much
     // there should never be a case where every note is shown and the chart maxed out all note lanes
-    // some sort of calculation based off of the minimum speed and extra buffer chunks
-    size_t mesh_size = CHART_NOTES_MAX * num_lanes * MESH_VERTICES_QUAD;
-    mesh->chips_mesh = mesh_create(mesh_size, mesh->chips_program, GL_DYNAMIC_DRAW);
-    mesh->holds_mesh = mesh_create(mesh_size, mesh->holds_program, GL_DYNAMIC_DRAW);
+    // maybe use some sort of calculation based off of the minimum speed and extra buffer chunks
+    mesh->chips_mesh = mesh_create(CHART_NOTES_MAX * num_lanes * NOTE_MESH_CHIP_SIZE, mesh->chips_program, GL_DYNAMIC_DRAW);
+    mesh->holds_mesh = mesh_create(CHART_NOTES_MAX * num_lanes * NOTE_MESH_HOLD_SIZE, mesh->holds_program, GL_DYNAMIC_DRAW);
 
     // return the note mesh
     return mesh;
@@ -56,6 +59,10 @@ NoteMesh *note_mesh_create(const char *type_name,
 
 void note_mesh_free(NoteMesh *mesh)
 {
+    // free all the allocated properties
+    free(mesh->loaded_notes_index);
+    free(mesh->loaded_notes_size);
+
     // free the meshes
     mesh_free(mesh->chips_mesh);
     mesh_free(mesh->holds_mesh);
@@ -79,6 +86,13 @@ void note_mesh_load(NoteMesh *mesh,
 
     for (int l = 0; l < mesh->num_lanes; l++)
     {
+        // reset the current lanes loaded notes index and size
+        mesh->loaded_notes_index[l] = 0;
+        mesh->loaded_notes_size[l] = 0;
+
+        // whether or not the current lanes loaded notes index was set
+        bool index_set = false;
+
         for (int n = 0; n < mesh->num_notes[l]; n++)
         {
             Note *note = &mesh->notes[l][n];
@@ -91,6 +105,16 @@ void note_mesh_load(NoteMesh *mesh,
             // no notes after it can be before end_subbeat
             if (note->start_subbeat > end_subbeat)
                 break;
+
+            // set the loaded notes index if it has not been set yet
+            if (!index_set)
+            {
+                mesh->loaded_notes_index[l] = n;
+                index_set = true;
+            }
+
+            // update the loaded notes size for the current index
+            mesh->loaded_notes_size[l] = (n + 1) - mesh->loaded_notes_index[l];
 
             // calculate the position of this note
             vec3_t position = vec3((l * mesh->note_width) - (TRACK_NOTES_WIDTH / 2),
@@ -114,9 +138,9 @@ void note_mesh_load(NoteMesh *mesh,
 
             // increment the appropriate vertices_index for the next note
             if (note->hold)
-                hold_vertices_index += MESH_VERTICES_QUAD;
+                hold_vertices_index += NOTE_MESH_HOLD_SIZE;
             else
-                chip_vertices_index += MESH_VERTICES_QUAD;
+                chip_vertices_index += NOTE_MESH_CHIP_SIZE;
         }
     }
 
@@ -133,7 +157,26 @@ void note_mesh_draw_holds(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t
     // draw the holds
     program_use(mesh->holds_program);
     program_set_matrices(mesh->holds_program, projection, view, model);
-    mesh_draw(mesh->holds_mesh, 0, mesh->holds_size);
+    mesh_draw_start(mesh->holds_mesh);
+
+    int vertices_index = 0;
+    for (int l = 0; l < mesh->num_lanes; l++)
+    {
+        for (int n = mesh->loaded_notes_index[l]; n < mesh->loaded_notes_index[l] + mesh->loaded_notes_size[l]; n++)
+        {
+            // skip chips
+            if (!mesh->notes[l][n].hold)
+                continue;
+
+            // draw the hold
+            mesh_draw_vertices(mesh->holds_mesh, vertices_index, NOTE_MESH_HOLD_SIZE);
+
+            // increment the vertices index
+            vertices_index += NOTE_MESH_HOLD_SIZE;
+        }
+    }
+
+    mesh_draw_end(mesh->holds_mesh);
 }
 
 void note_mesh_draw_chips(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t model)
@@ -144,5 +187,25 @@ void note_mesh_draw_chips(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t
     // draw the chips
     program_use(mesh->chips_program);
     program_set_matrices(mesh->chips_program, projection, view, model);
-    mesh_draw(mesh->chips_mesh, 0, mesh->chips_size);
+    mesh_draw_start(mesh->chips_mesh);
+
+    int vertices_index = 0;
+    for (int l = 0; l < mesh->num_lanes; l++)
+    {
+        for (int n = mesh->loaded_notes_index[l]; n < mesh->loaded_notes_index[l] + mesh->loaded_notes_size[l]; n++)
+        {
+            // skip holds
+            if (mesh->notes[l][n].hold)
+                continue;
+
+            // draw the current chip if it wasnt removed
+            if (!mesh->chips_removed[l][n])
+                mesh_draw_vertices(mesh->chips_mesh, vertices_index, NOTE_MESH_CHIP_SIZE);
+
+            // increment the vertices index
+            vertices_index += NOTE_MESH_CHIP_SIZE;
+        }
+    }
+
+    mesh_draw_end(mesh->chips_mesh);
 }
