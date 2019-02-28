@@ -34,6 +34,9 @@ typedef struct
     // the index of and size of the currently loaded notes for each lane in notes
     int *loaded_notes_index;
     int *loaded_notes_size;
+
+    // whether or not each chip from notes is removed
+    bool **chips_removed;
 } NoteMesh;
 
 // create a note mesh for the given type and notes
@@ -47,6 +50,9 @@ void note_mesh_free(NoteMesh *mesh);
 
 // load the note vertices of the given mesh that are between start_subbeat and end_subbeat into the given mesh
 void note_mesh_load(NoteMesh *mesh, uint16_t start_subbeat, uint16_t end_subbeat, double speed);
+
+// remove the vertices for the chip at the given lane and index from the given mesh
+void note_mesh_remove_chip(NoteMesh *mesh, int lane, int index);
 
 // draw the given meshes holds with the given projection, view, and model matrices
 void note_mesh_draw_holds(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t model);

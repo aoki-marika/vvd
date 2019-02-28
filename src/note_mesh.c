@@ -23,6 +23,12 @@ NoteMesh *note_mesh_create(const char *type_name,
     mesh->note_width = note_width;
     mesh->loaded_notes_index = calloc(num_lanes, sizeof(int));
     mesh->loaded_notes_size = calloc(num_lanes, sizeof(int));
+    mesh->chips_removed = calloc(num_lanes, sizeof(bool *));
+
+    for (int i = 0; i < num_lanes; i++)
+    {
+        mesh->chips_removed[i] = calloc(num_notes[i], sizeof(bool));
+    }
 
     // create the chip program
     char chip_vertex_path[PATH_MAX];
@@ -62,6 +68,10 @@ void note_mesh_free(NoteMesh *mesh)
     // free all the allocated properties
     free(mesh->loaded_notes_index);
     free(mesh->loaded_notes_size);
+
+    for (int i = 0; i < mesh->num_lanes; i++)
+        free(mesh->chips_removed[i]);
+    free(mesh->chips_removed);
 
     // free the meshes
     mesh_free(mesh->chips_mesh);
@@ -147,6 +157,21 @@ void note_mesh_load(NoteMesh *mesh,
     // set the meshes chips and holds sizes
     mesh->chips_size = chip_vertices_index;
     mesh->holds_size = hold_vertices_index;
+}
+
+void note_mesh_remove_chip(NoteMesh *mesh, int lane, int index)
+{
+    // assert that the lane is valid
+    assert(lane >= 0 && lane < mesh->num_lanes);
+
+    // assert that the index is valid
+    assert(index >= 0 && index < mesh->num_notes[lane]);
+
+    // assert that the note is a chip
+    assert(!mesh->notes[lane][index].hold);
+
+    // mark the chip as removed
+    mesh->chips_removed[lane][index] = true;
 }
 
 void note_mesh_draw_holds(NoteMesh *mesh, mat4_t projection, mat4_t view, mat4_t model)
