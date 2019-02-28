@@ -143,9 +143,11 @@ void update_current_analogs(Playback *playback, double time)
 }
 
 void send_current_notes_events(Scoring *scoring,
+                               NoteMesh *note_mesh,
                                int num_lanes,
                                int last_notes[num_lanes],
                                int current_notes[num_lanes],
+                               Note *notes[num_lanes],
                                Judgement (* scoring_note_passed)(Scoring *, int, int),
                                void (* scoring_note_current)(Scoring *, int, int))
 {
@@ -163,11 +165,26 @@ void send_current_notes_events(Scoring *scoring,
             // only pass an event if it has a note
 
             if (last != PLAYBACK_CURRENT_NONE)
+            {
                 // todo: show the judgement on the critical line
                 scoring_note_passed(scoring, i, last);
 
+                // reset the current hold and its state for the current lane if a hold passed
+                if (notes[i][last].hold)
+                {
+                    note_mesh_set_current_hold(note_mesh, i, PLAYBACK_CURRENT_NONE);
+                    note_mesh_set_current_hold_state(note_mesh, i, HoldStateDefault);
+                }
+            }
+
             if (current != PLAYBACK_CURRENT_NONE)
+            {
                 scoring_note_current(scoring, i, current);
+
+                // set the current hold if the current note is a hold
+                if (notes[i][current].hold)
+                    note_mesh_set_current_hold(note_mesh, i, current);
+            }
         }
     }
 }
@@ -203,19 +220,50 @@ void update_current(Playback *playback, double time)
 
     // send the current bt notes events
     send_current_notes_events(playback->scoring,
+                              playback->track->bt_mesh,
                               CHART_BT_LANES,
                               last_bt_notes,
                               playback->current_bt_notes,
+                              playback->chart->bt_notes,
                               scoring_bt_note_passed,
                               scoring_bt_note_current);
 
     // send the current fx notes events
     send_current_notes_events(playback->scoring,
+                              playback->track->fx_mesh,
                               CHART_FX_LANES,
                               last_fx_notes,
                               playback->current_fx_notes,
+                              playback->chart->fx_notes,
                               scoring_fx_note_passed,
                               scoring_fx_note_current);
+}
+
+void update_current_hold_states(NoteMesh *note_mesh,
+                                int num_lanes,
+                                Note *notes[num_lanes],
+                                int current_notes[num_lanes],
+                                double time,
+                                bool holds_held[num_lanes])
+{
+    for (int i = 0; i < num_lanes; i++)
+    {
+        // skip the current lane if there is no current note for it
+        if (current_notes[i] == PLAYBACK_CURRENT_NONE)
+            continue;
+
+        // get the current note for the current lane
+        Note *note = &notes[i][current_notes[i]];
+
+        // set the current holds state to critical if the hold is held
+        if (holds_held[i])
+            note_mesh_set_current_hold_state(note_mesh, i, HoldStateCritical);
+        // set the current holds state to critical if the hold is held and the holds start window has passed
+        // this is to replicate how holds only get error states when they pass their start window
+        // without this holds will almost always have an error state for a frame or two before critical
+        else if (note->hold && time >= note->start_time + JUDGEMENT_HOLD_START_WINDOW)
+            note_mesh_set_current_hold_state(note_mesh, i, HoldStateError);
+    }
 }
 
 void playback_tick(Playback *playback, double subbeat)
@@ -241,7 +289,7 @@ void playback_tick(Playback *playback, double subbeat)
                              bt_hold_judgements,
                              fx_hold_judgements);
 
-        // todo: process tick judgements
+        // todo: process the hold judgements
     }
 
     // set the given playbacks last tick
@@ -281,6 +329,21 @@ bool playback_update(Playback *playback)
     // update the current notes/analogs
     update_current(playback, relative_time);
 
+    // update the current bt and fx hold states
+    update_current_hold_states(playback->track->bt_mesh,
+                               CHART_BT_LANES,
+                               playback->chart->bt_notes,
+                               playback->current_bt_notes,
+                               relative_time,
+                               playback->scoring->bt_holds_held);
+
+    update_current_hold_states(playback->track->fx_mesh,
+                               CHART_FX_LANES,
+                               playback->chart->fx_notes,
+                               playback->current_fx_notes,
+                               relative_time,
+                               playback->scoring->fx_holds_held);
+
     // get relative time in subbeats
     double relative_time_subbeat = time_to_subbeat(playback->chart, playback->tempo_index, relative_time);
 
@@ -299,6 +362,7 @@ void playback_note_state_changed(Playback *playback,
                                  int num_lanes,
                                  Note *notes[num_lanes],
                                  int current_notes[num_lanes],
+                                 NoteMesh *note_mesh,
                                  int lane,
                                  bool pressed,
                                  Judgement (* scoring_state_changed)(Scoring *scoring, int, bool, double),
@@ -313,16 +377,21 @@ void playback_note_state_changed(Playback *playback,
     // pass the event to the given method
     Judgement judgement = scoring_state_changed(playback->scoring, lane, pressed, relative_time);
 
-    // show the beam for the judgement if its not none
+    // if there was a judgement for the given lane and state
     if (judgement != JudgementNone)
+    {
+        // show a beam for the given lane and judgement
         track_beam(playback->track, lane, judgement);
+
+        // remove the chip from the note mesh
+        note_mesh_remove_chip(note_mesh, lane, current_notes[lane]);
+    }
     // show an error beam if the given state is pressed and judgement was none, and theres no current note or hold
     // this is to replicate sdvx in showing beams when pressing buttons without notes
     else if (pressed &&
              judgement == JudgementNone &&
              (current_notes[lane] == PLAYBACK_CURRENT_NONE || !notes[lane][current_notes[lane]].hold))
         track_beam(playback->track, lane, JudgementError);
-    // todo: if the state is pressed and the current note is a hold, this is where hold active/inactive state should be set
 }
 
 void playback_bt_state_changed(Playback *playback, int lane, bool pressed)
@@ -332,6 +401,7 @@ void playback_bt_state_changed(Playback *playback, int lane, bool pressed)
                                 CHART_BT_LANES,
                                 playback->chart->bt_notes,
                                 playback->current_bt_notes,
+                                playback->track->bt_mesh,
                                 lane,
                                 pressed,
                                 scoring_bt_state_changed,
@@ -345,6 +415,7 @@ void playback_fx_state_changed(Playback *playback, int lane, bool pressed)
                                 CHART_FX_LANES,
                                 playback->chart->fx_notes,
                                 playback->current_fx_notes,
+                                playback->track->fx_mesh,
                                 lane,
                                 pressed,
                                 scoring_fx_state_changed,

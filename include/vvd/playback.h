@@ -12,6 +12,7 @@
 #define PLAYBACK_HALF_TICK_RATE_BPM 256
 
 // the value used to signify that there is no current note/analog in a playbacks current_* array
+// todo: maybe make this a more generic INDEX_NONE? it will probably end up being used in more places
 #define PLAYBACK_CURRENT_NONE -1
 
 typedef struct
