@@ -68,8 +68,8 @@ void update_current_notes(int num_lanes,
             bool in_range = false;
 
             if (note->hold)
-                in_range = (time >= note->start_time - JUDGEMENT_ERROR_WINDOW) &&
-                           (time <= note->end_time + JUDGEMENT_ERROR_WINDOW);
+                in_range = (time >= note->start_time - JUDGEMENT_HOLD_START_WINDOW) &&
+                           (time <= note->end_time);
             else
                 in_range = (time >= note->start_time - JUDGEMENT_ERROR_WINDOW) &&
                            (time <= note->start_time + JUDGEMENT_ERROR_WINDOW);

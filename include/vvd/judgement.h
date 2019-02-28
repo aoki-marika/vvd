@@ -10,6 +10,11 @@
 #define JUDGEMENT_ERROR_WINDOW 8 * SCREEN_FRAME_DURATION
 #define JUDGEMENT_ANALOG_SLAM_WINDOW JUDGEMENT_CRITICAL_WINDOW + JUDGEMENT_NEAR_WINDOW
 
+// timing window for the start of holds
+// only applies to before (-)
+// todo: whats the proper hold window?
+#define JUDGEMENT_HOLD_START_WINDOW JUDGEMENT_ERROR_WINDOW
+
 typedef enum
 {
     JudgementNone,
