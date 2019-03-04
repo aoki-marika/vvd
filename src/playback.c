@@ -7,6 +7,7 @@
 #include "timing.h"
 #include "screen.h"
 #include "note_utils.h"
+#include "shared.h"
 
 Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track, Scoring *scoring)
 {
@@ -23,15 +24,15 @@ Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track, S
 
     // default all the current notes/analogs to none
     for (int i = 0; i < CHART_BT_LANES; i++)
-        playback->current_bt_notes[i] = PLAYBACK_CURRENT_NONE;
+        playback->current_bt_notes[i] = INDEX_NONE;
 
     for (int i = 0; i < CHART_FX_LANES; i++)
-        playback->current_fx_notes[i] = PLAYBACK_CURRENT_NONE;
+        playback->current_fx_notes[i] = INDEX_NONE;
 
     for (int i = 0; i < CHART_ANALOG_LANES; i++)
     {
-        playback->current_analogs[i] = PLAYBACK_CURRENT_NONE;
-        playback->current_analogs_points[i] = PLAYBACK_CURRENT_NONE;
+        playback->current_analogs[i] = INDEX_NONE;
+        playback->current_analogs_points[i] = INDEX_NONE;
     }
 
     // return the playback
@@ -63,7 +64,7 @@ void update_current_notes(int num_lanes,
     for (int l = 0; l < num_lanes; l++)
     {
         // clear the current lanes current note
-        current_notes[l] = PLAYBACK_CURRENT_NONE;
+        current_notes[l] = INDEX_NONE;
 
         for (int n = 0; n < num_notes[l]; n++)
         {
@@ -99,8 +100,8 @@ void update_current_analogs(Playback *playback, double time)
     for (int l = 0; l < CHART_ANALOG_LANES; l++)
     {
         // clear the current lanes current analog and point
-        playback->current_analogs[l] = PLAYBACK_CURRENT_NONE;
-        playback->current_analogs_points[l] = PLAYBACK_CURRENT_NONE;
+        playback->current_analogs[l] = INDEX_NONE;
+        playback->current_analogs_points[l] = INDEX_NONE;
 
         for (int a = 0; a < playback->chart->num_analogs[l]; a++)
         {
@@ -169,7 +170,7 @@ void send_current_notes_events(Scoring *scoring,
             // pass the current events
             // only pass an event if it has a note
 
-            if (last != PLAYBACK_CURRENT_NONE)
+            if (last != INDEX_NONE)
             {
                 // todo: show the judgement on the critical line
                 scoring_note_passed(scoring, i, last);
@@ -177,12 +178,12 @@ void send_current_notes_events(Scoring *scoring,
                 // reset the current hold and its state for the current lane if a hold passed
                 if (notes[i][last].hold)
                 {
-                    note_mesh_set_current_hold(note_mesh, i, PLAYBACK_CURRENT_NONE);
+                    note_mesh_set_current_hold(note_mesh, i, INDEX_NONE);
                     note_mesh_set_current_hold_state(note_mesh, i, HoldStateDefault);
                 }
             }
 
-            if (current != PLAYBACK_CURRENT_NONE)
+            if (current != INDEX_NONE)
             {
                 scoring_note_current(scoring, i, current);
 
@@ -254,7 +255,7 @@ void update_current_hold_states(NoteMesh *note_mesh,
     for (int i = 0; i < num_lanes; i++)
     {
         // skip the current lane if there is no current note for it
-        if (current_notes[i] == PLAYBACK_CURRENT_NONE)
+        if (current_notes[i] == INDEX_NONE)
             continue;
 
         // get the current note for the current lane
@@ -395,7 +396,7 @@ void playback_note_state_changed(Playback *playback,
     // this is to replicate sdvx in showing beams when pressing buttons without notes
     else if (pressed &&
              judgement == JudgementNone &&
-             (current_notes[lane] == PLAYBACK_CURRENT_NONE || !notes[lane][current_notes[lane]].hold))
+             (current_notes[lane] == INDEX_NONE || !notes[lane][current_notes[lane]].hold))
         track_beam(playback->track, lane, JudgementError);
 }
 

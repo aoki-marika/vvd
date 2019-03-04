@@ -52,7 +52,6 @@ typedef struct
     bool **chips_removed;
 
     // the indexes of the current hold of each lane of this mesh, if any
-    // uses PLAYBACK_CURRENT_NONE for none
     int *current_hold_indexes;
 
     // the state of each current hold of each lane of this mesh

@@ -5,7 +5,7 @@
 #include <linux/limits.h>
 
 #include "track.h"
-#include "playback.h"
+#include "shared.h"
 
 void load_notes(NoteMesh *mesh)
 {
@@ -80,7 +80,7 @@ NoteMesh *note_mesh_create(const char *type_name,
     {
         mesh->chip_positions[i] = malloc(num_notes[i] * sizeof(float));
         mesh->chips_removed[i] = calloc(num_notes[i], sizeof(bool));
-        mesh->current_hold_indexes[i] = PLAYBACK_CURRENT_NONE;
+        mesh->current_hold_indexes[i] = INDEX_NONE;
         mesh->current_hold_states[i] = HoldStateDefault;
     }
 
@@ -168,10 +168,10 @@ void note_mesh_set_current_hold(NoteMesh *mesh, int lane, int index)
     assert(lane >= 0 && lane < mesh->num_lanes);
 
     // only assert that the index and note are valid if the index is not none
-    if (index != PLAYBACK_CURRENT_NONE)
+    if (index != INDEX_NONE)
     {
         // assert that the index is valid
-        assert(index == PLAYBACK_CURRENT_NONE || (index >= 0 && index < mesh->num_notes[lane]));
+        assert(index == INDEX_NONE || (index >= 0 && index < mesh->num_notes[lane]));
 
         // assert that the note is a hold
         assert(mesh->notes[lane][index].hold);
