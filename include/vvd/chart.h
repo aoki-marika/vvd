@@ -46,8 +46,7 @@ typedef struct
 typedef struct
 {
     // the beats per minute of this tempo
-    // todo: float -> double
-    float bpm;
+    double bpm;
 
     // the time in milliseconds that this tempo starts at
     double time;
