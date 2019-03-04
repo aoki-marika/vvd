@@ -5,7 +5,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "chart_ksh.h"
 #include "chart_vox.h"
 #include "note_utils.h"
 
@@ -103,13 +102,7 @@ Chart *chart_create(const char *path)
     if (path_extension)
     {
         // if more chart types are added this is where their detection code would go
-        if (strcmp(path_extension, ".ksh") == 0)
-        {
-            parsing_state_create = chart_ksh_parsing_state_create;
-            parsing_state_free = chart_ksh_parsing_state_free;
-            parse_line = chart_ksh_parse_line;
-        }
-        else if (strcmp(path_extension, ".vox") == 0)
+        if (strcmp(path_extension, ".vox") == 0)
         {
             parsing_state_create = chart_vox_parsing_state_create;
             parsing_state_free = chart_vox_parsing_state_free;
