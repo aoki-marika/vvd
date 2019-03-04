@@ -7,6 +7,9 @@
 // the size, in vertices, of a measure bar in a measure bar mesh
 #define MEASURE_BAR_MESH_MEASURE_BAR_SIZE MESH_VERTICES_QUAD
 
+// the draw height of a measure bar
+#define MEASURE_BAR_MESH_MEASURE_BAR_HEIGHT 0.025f
+
 typedef struct
 {
     // the chart for this mesh to get measures from

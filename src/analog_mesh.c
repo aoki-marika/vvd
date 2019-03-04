@@ -5,8 +5,8 @@
 float analog_point_draw_position(AnalogPoint *point)
 {
     // return the draw position, on the x axis, of the given point
-    float analog_track_width = (TRACK_WIDTH - TRACK_ANALOG_WIDTH) * point->position_scale;
-    return point->position * analog_track_width - (TRACK_ANALOG_WIDTH / 2) - (analog_track_width / 2);
+    float analog_track_width = (TRACK_WIDTH - ANALOG_MESH_SEGMENT_WIDTH) * point->position_scale;
+    return point->position * analog_track_width - (ANALOG_MESH_SEGMENT_WIDTH / 2) - (analog_track_width / 2);
 }
 
 void create_segment_vertices(Mesh *mesh,
@@ -21,7 +21,7 @@ void create_segment_vertices(Mesh *mesh,
 
     // offset the start of the segment if the last segment was a slam, so the vertices arent overlaying eachother
     if (start_point->slam)
-        start_position.y += track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS);
+        start_position.y += track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS);
 
     // get the segments end position
     vec3_t end_position = vec3(analog_point_draw_position(end_point),
@@ -31,7 +31,7 @@ void create_segment_vertices(Mesh *mesh,
     // create the vertices
     mesh_set_vertices_quad_edges(mesh,
                                  *vertices_index,
-                                 TRACK_ANALOG_WIDTH,
+                                 ANALOG_MESH_SEGMENT_WIDTH,
                                  start_position,
                                  end_position);
 
@@ -57,14 +57,14 @@ void create_slam_vertices(Mesh *mesh,
         position.x = analog_point_draw_position(end_point);
 
     // get the slams width by getting the difference in draw positions between the start and end points
-    // + TRACK_ANALOG_WIDTH so the edges of the slam go to the edges of other segments
-    float width = fabs(analog_point_draw_position(end_point) - analog_point_draw_position(start_point)) + TRACK_ANALOG_WIDTH;
+    // + ANALOG_MESH_SEGMENT_WIDTH so the edges of the slam go to the edges of other segments
+    float width = fabs(analog_point_draw_position(end_point) - analog_point_draw_position(start_point)) + ANALOG_MESH_SEGMENT_WIDTH;
 
     // create the slam vertices
     mesh_set_vertices_quad(mesh,
                            *vertices_index,
                            width,
-                           track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS),
+                           track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS),
                            position);
 
     // increment vertices_index
@@ -75,14 +75,14 @@ void create_slam_vertices(Mesh *mesh,
     {
         // get the tails position
         vec3_t tail_position = vec3(analog_point_draw_position(end_point),
-                                    position.y + track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS),
+                                    position.y + track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS),
                                     0);
 
         // create the tail vertices
         mesh_set_vertices_quad(mesh,
                                *vertices_index,
-                               TRACK_ANALOG_WIDTH,
-                               track_subbeat_position(TRACK_ANALOG_SLAM_SUBBEATS),
+                               ANALOG_MESH_SEGMENT_WIDTH,
+                               track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS),
                                tail_position);
 
         // increment vertices_index

@@ -91,12 +91,12 @@ Track *track_create(Chart *chart)
     // create the bt beam mesh
     create_beam_mesh(track->beam_program,
                      &track->bt_beam_mesh,
-                     TRACK_BT_WIDTH);
+                     BT_MESH_NOTE_WIDTH);
 
     // create the fx beam mesh
     create_beam_mesh(track->beam_program,
                      &track->fx_beam_mesh,
-                     TRACK_FX_WIDTH);
+                     FX_MESH_NOTE_WIDTH);
 
     // create the measure bar, bt, fx, and analog meshes
     track->measure_bar_mesh = measure_bar_mesh_create(chart);
@@ -277,7 +277,7 @@ void track_draw(Track *track, int tempo_index, double subbeat, double speed)
                view,
                model,
                track->bt_beam_mesh,
-               TRACK_BT_WIDTH,
+               BT_MESH_NOTE_WIDTH,
                TRACK_BT_BEAM_ALPHA);
 
     // draw the fx beams
@@ -288,7 +288,7 @@ void track_draw(Track *track, int tempo_index, double subbeat, double speed)
                view,
                model,
                track->fx_beam_mesh,
-               TRACK_FX_WIDTH,
+               FX_MESH_NOTE_WIDTH,
                TRACK_FX_BEAM_ALPHA);
 
     // draw all the notes and analogs in order

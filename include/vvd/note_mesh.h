@@ -10,6 +10,9 @@
 #define NOTE_MESH_CHIP_SIZE MESH_VERTICES_QUAD
 #define NOTE_MESH_HOLD_SIZE MESH_VERTICES_QUAD
 
+// the draw height of a chip note
+#define NOTE_MESH_CHIP_HEIGHT 0.075f
+
 typedef enum
 {
     // hold is not current

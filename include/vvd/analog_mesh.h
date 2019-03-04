@@ -9,6 +9,14 @@
 #define ANALOG_MESH_SLAM_SIZE MESH_VERTICES_QUAD
 #define ANALOG_MESH_SLAM_TAIL_SIZE MESH_VERTICES_QUAD
 
+// the width of a non-slam analog segment
+#define ANALOG_MESH_SEGMENT_WIDTH (TRACK_GUTTER_WIDTH * 1.1)
+
+// the height in subbeats of an analog slam
+// todo: not sure what unit slams are sized in but its likely not subbeats
+// pupa mxm is a good reference for how slam sizing works
+#define ANALOG_MESH_SLAM_SUBBEATS 8
+
 typedef struct
 {
     // the chart for this mesh to get analogs from

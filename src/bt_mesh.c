@@ -9,5 +9,5 @@ NoteMesh *bt_mesh_create(Chart *chart)
                             CHART_BT_LANES,
                             chart->num_bt_notes,
                             chart->bt_notes,
-                            TRACK_BT_WIDTH);
+                            BT_MESH_NOTE_WIDTH);
 }

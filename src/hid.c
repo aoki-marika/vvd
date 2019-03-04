@@ -346,7 +346,6 @@ HIDRequestGroup *hid_device_find_or_create_request_group(HIDDevice *device, int 
     HIDRequestGroup *request_group = &device->request_groups[device->num_request_groups - 1];
 
     // set request_group->report_size
-    // todo: could be better, not great to loop every frame
     switch (type)
     {
         case HID_REQUEST_INPUT:

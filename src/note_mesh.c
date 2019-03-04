@@ -21,7 +21,7 @@ void load_notes(NoteMesh *mesh)
         mesh_set_vertices_quad(mesh->chips_mesh,
                                l * NOTE_MESH_CHIP_SIZE,
                                mesh->note_width,
-                               TRACK_CHIP_HEIGHT,
+                               NOTE_MESH_CHIP_HEIGHT,
                                vec3(lane_position, 0, 0));
 
         for (int n = 0; n < mesh->num_notes[l]; n++)

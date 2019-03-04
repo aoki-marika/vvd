@@ -9,5 +9,5 @@ NoteMesh *fx_mesh_create(Chart *chart)
                             CHART_FX_LANES,
                             chart->num_fx_notes,
                             chart->fx_notes,
-                            TRACK_FX_WIDTH);
+                            FX_MESH_NOTE_WIDTH);
 }

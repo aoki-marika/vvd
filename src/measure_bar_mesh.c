@@ -59,7 +59,7 @@ MeasureBarMesh *measure_bar_mesh_create(Chart *chart)
     mesh_set_vertices_quad(mesh->mesh,
                            0,
                            TRACK_WIDTH,
-                           TRACK_BAR_HEIGHT,
+                           MEASURE_BAR_MESH_MEASURE_BAR_HEIGHT,
                            vec3(-TRACK_WIDTH / 2, 0, 0));
 
     // load the measure bars
