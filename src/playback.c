@@ -43,6 +43,11 @@ void playback_free(Playback *playback)
     free(playback);
 }
 
+void playback_set_speed(Playback *playback, double speed)
+{
+    playback->speed = speed;
+}
+
 void playback_start(Playback *playback, double delay)
 {
     // set the playbacks start time
@@ -352,7 +357,7 @@ bool playback_update(Playback *playback)
 
     // draw the track
     // draw at subbeat 0 if playback has not started yet so theres no scroll in before starting
-    track_draw(playback->track, playback->tempo_index, (!playback->started) ? 0 : relative_time_subbeat);
+    track_draw(playback->track, playback->tempo_index, (!playback->started) ? 0 : relative_time_subbeat, playback->speed);
 
     // say playback is not finished
     return false;

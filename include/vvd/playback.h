@@ -29,6 +29,9 @@ typedef struct
     // the scoring for this playback to use
     Scoring *scoring;
 
+    // the speed this playback is currently scrolling at
+    double speed;
+
     // whether or not this playback has begun playing
     // set to true after the current time is at or passed start_time in playback_update
     bool started;
@@ -54,6 +57,9 @@ typedef struct
 
 Playback *playback_create(Chart *chart, AudioTrack *audio_track, Track *track, Scoring *scoring);
 void playback_free(Playback *playback);
+
+// set the given playbacks scroll speed
+void playback_set_speed(Playback *playback, double speed);
 
 // start playing the given playback with a given delay
 // delay is how many milliseconds after calling playback_start that playback will start
