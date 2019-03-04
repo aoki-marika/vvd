@@ -39,8 +39,6 @@ Track *track_create(Chart *chart)
 
     // set the track properties
     track->chart = chart;
-    track->tempo_index = 0;
-    track->buffer_position = -1;
 
     // default the beam times so they arent triggered when the track is loaded
     double hidden_time = time_milliseconds() - TRACK_BEAM_DURATION;
@@ -85,10 +83,6 @@ Track *track_create(Chart *chart)
                                position);
     }
 
-    // create the measure bars program and mesh
-    track->measure_bars_program = program_create("measure_bar.vs", "measure_bar.fs", true);
-    track->measure_bars_mesh = mesh_create(MESH_VERTICES_QUAD * chart->num_measures, track->measure_bars_program, GL_DYNAMIC_DRAW);
-
     // create the beam program
     track->beam_program = program_create("beam.vs", "beam.fs", true);
     track->uniform_beam_judgement_id = program_get_uniform_id(track->beam_program, "judgement");
@@ -104,7 +98,8 @@ Track *track_create(Chart *chart)
                      &track->fx_beam_mesh,
                      TRACK_FX_WIDTH);
 
-    // create the bt, fx, and analog meshes
+    // create the measure bar, bt, fx, and analog meshes
+    track->measure_bar_mesh = measure_bar_mesh_create(chart);
     track->bt_mesh = bt_mesh_create(chart);
     track->fx_mesh = fx_mesh_create(chart);
     track->analog_mesh = analog_mesh_create(chart);
@@ -117,16 +112,15 @@ void track_free(Track *track)
 {
     // free all the programs
     program_free(track->lane_program);
-    program_free(track->measure_bars_program);
     program_free(track->beam_program);
 
     // free all the meshes
     mesh_free(track->lane_mesh);
-    mesh_free(track->measure_bars_mesh);
     mesh_free(track->bt_beam_mesh);
     mesh_free(track->fx_beam_mesh);
 
-    // free all the note/analog meshes
+    // free all the measure bar/note/analog meshes
+    measure_bar_mesh_free(track->measure_bar_mesh);
     note_mesh_free(track->bt_mesh);
     note_mesh_free(track->fx_mesh);
     analog_mesh_free(track->analog_mesh);
@@ -135,107 +129,16 @@ void track_free(Track *track)
     free(track);
 }
 
-float beat_size(double speed)
+float track_beat_size()
 {
-    // return the draw size of a beat on the track at the given speed
-    return speed / TRACK_BEAT_SPEED * TRACK_LENGTH;
+    // return the draw size of a beat on the track at 1x speed
+    return 1.0f / TRACK_BEAT_SPEED * TRACK_LENGTH;
 }
 
-float track_subbeat_position(double subbeat, double speed)
+float track_subbeat_position(double subbeat)
 {
-    // return the draw position of the given subbeat on the track at the given speed
-    return subbeat / CHART_BEAT_SUBBEATS * beat_size(speed);
-}
-
-void load_measure_bars_mesh(Track *track)
-{
-    // the index of the current beat in track->chart->beats
-    int beat_index = 0;
-
-    // the last measures draw position
-    vec3_t measure_position = vec3(-TRACK_NOTES_WIDTH / 2, 0, 0);
-
-    // for each measure
-    for (uint16_t i = 0; i < track->chart->num_measures; i++)
-    {
-        // create the measure bar for the current measure
-        mesh_set_vertices_quad(track->measure_bars_mesh,
-                               i * MESH_VERTICES_QUAD,
-                               TRACK_NOTES_WIDTH,
-                               TRACK_BAR_HEIGHT,
-                               measure_position);
-
-        // increment the current beat if the next one is at or before the current measure
-        if (beat_index + 1 < track->chart->num_beats &&
-            i >= track->chart->beats[beat_index + 1].measure)
-            beat_index++;
-
-        // get the start and end position of this measure, as if it was in 4/4 time
-        float start_position = track_subbeat_position((i - 1) * 4 * CHART_BEAT_SUBBEATS, track->speed);
-        float end_position = track_subbeat_position(i * 4 * CHART_BEAT_SUBBEATS, track->speed);
-
-        // get the size of the current measure as if it was 4/4 time by getting the difference between the start and end
-        // then multiply by numerator/denominator to get the final size of the measure
-        Beat *beat = &track->chart->beats[beat_index];
-        float measure_size = (end_position - start_position) * ((float)beat->numerator / (float)beat->denominator);
-
-        // increment measure_position.y for the next measure
-        measure_position.y += measure_size;
-    }
-}
-
-void load_chart_meshes(Track *track, int buffer_position, int num_chunks)
-{
-    // calculate the start and end subbeat for buffer_position
-    uint16_t start_subbeat = buffer_position * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
-    uint16_t end_subbeat = (buffer_position + num_chunks) * TRACK_BUFFER_CHUNK_BEATS * CHART_BEAT_SUBBEATS;
-
-    // load the bt, fx, and analog meshes
-    note_mesh_load(track->bt_mesh, start_subbeat, end_subbeat, track->speed);
-    note_mesh_load(track->fx_mesh, start_subbeat, end_subbeat, track->speed);
-    analog_mesh_load(track->analog_mesh, start_subbeat, end_subbeat, track->speed);
-}
-
-void load_chart_meshes_at_subbeat(Track *track, double subbeat, bool force)
-{
-    // convert subbeat to beats
-    double beat = subbeat / CHART_BEAT_SUBBEATS;
-
-    // get the buffer position for beat
-    // subtract buffer so buffer position starts at the beginning of the buffer
-    int buffer_position = ceil(beat / TRACK_BUFFER_CHUNK_BEATS) - TRACK_EXTRA_BUFFER_CHUNKS;
-
-    // ensure buffer position is always at least zero
-    if (buffer_position < 0)
-        buffer_position = 0;
-
-    // if the buffer position changed or load should be forced
-    if (buffer_position != track->buffer_position || force)
-    {
-        // calculate the number of chunks that should be loaded
-        //
-        // the number of beats per track size at track->speed
-        // divided by beats per chunk to get it in chunks
-        // plus buffer * 2 for before and after buffer
-        int num_chunks = ceil((TRACK_LENGTH / beat_size(track->speed)) / TRACK_BUFFER_CHUNK_BEATS) + (TRACK_EXTRA_BUFFER_CHUNKS * 2);
-
-        // set the given tracks buffer position
-        track->buffer_position = buffer_position;
-
-        // load the chart meshes
-        load_chart_meshes(track, buffer_position, num_chunks);
-    }
-}
-
-void track_set_speed(Track *track, double speed)
-{
-    track->speed = speed;
-
-    // reload the measure bars mesh
-    load_measure_bars_mesh(track);
-
-    // load the chart meshes
-    load_chart_meshes_at_subbeat(track, track->subbeat, true);
+    // return the draw position of the given subbeat on the track at the 1x speed
+    return subbeat / CHART_BEAT_SUBBEATS * track_beat_size();
 }
 
 void note_beam(int num_lanes,
@@ -318,15 +221,8 @@ void draw_beams(Track *track,
     }
 }
 
-void track_draw(Track *track, int tempo_index, double subbeat)
+void track_draw(Track *track, int tempo_index, double subbeat, double speed)
 {
-    // set the given tracks subbeat and tempo index
-    track->subbeat = subbeat;
-    track->tempo_index = tempo_index;
-
-    // load the chart meshes
-    load_chart_meshes_at_subbeat(track, subbeat, false);
-
     // create the projection matrix
     mat4_t projection = m4_perspective(90.0f,
                                        (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT,
@@ -359,12 +255,16 @@ void track_draw(Track *track, int tempo_index, double subbeat)
 
     // scroll the bars and notes
     // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0
-    mat4_t scrolled_model = m4_mul(model, m4_translation(vec3(0, -track_subbeat_position(subbeat, track->speed) - (TRACK_LENGTH / 2), 0)));
+    mat4_t scrolled_model = m4_mul(model, m4_translation(vec3(0, -(track_subbeat_position(subbeat) * speed) - (TRACK_LENGTH / 2), 0)));
+
+    // get the start and end subbeat of the given subbeat for drawing
+    int subbeats_per_track = ceil(TRACK_LENGTH / (track_beat_size() * speed)) * CHART_BEAT_SUBBEATS;
+    int extra_subbeats = CHART_BEAT_SUBBEATS * 2;
+    uint16_t start_subbeat = subbeat - extra_subbeats;
+    uint16_t end_subbeat = subbeat + subbeats_per_track + extra_subbeats;
 
     // draw the measure bars
-    program_use(track->measure_bars_program);
-    program_set_matrices(track->measure_bars_program, projection, view, scrolled_model);
-    mesh_draw_all(track->measure_bars_mesh);
+    measure_bar_mesh_draw(track->measure_bar_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed);
 
     // normal blending for beams
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -392,9 +292,9 @@ void track_draw(Track *track, int tempo_index, double subbeat)
                TRACK_FX_BEAM_ALPHA);
 
     // draw all the notes and analogs in order
-    note_mesh_draw_holds(track->fx_mesh, projection, view, scrolled_model); //fx holds
-    note_mesh_draw_holds(track->bt_mesh, projection, view, scrolled_model); //bt holds
-    analog_mesh_draw(track->analog_mesh, projection, view, scrolled_model); //analogs
-    note_mesh_draw_chips(track->fx_mesh, projection, view, scrolled_model); //fx chips
-    note_mesh_draw_chips(track->bt_mesh, projection, view, scrolled_model); //bt chip
+    note_mesh_draw_holds(track->fx_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //fx holds
+    note_mesh_draw_holds(track->bt_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //bt holds
+    analog_mesh_draw(track->analog_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //analogs
+    note_mesh_draw_chips(track->fx_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //fx chips
+    note_mesh_draw_chips(track->bt_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //bt chip
 }

@@ -4,6 +4,7 @@
 #include "chart.h"
 #include "program.h"
 #include "mesh.h"
+#include "measure_bar_mesh.h"
 #include "note_mesh.h"
 #include "analog_mesh.h"
 
@@ -18,7 +19,7 @@
 #define TRACK_GUTTER_WIDTH 0.15f
 
 // the full width of the track
-#define TRACK_WIDTH TRACK_NOTES_WIDTH + (TRACK_GUTTER_WIDTH * CHART_ANALOG_LANES)
+#define TRACK_WIDTH (TRACK_NOTES_WIDTH + (TRACK_GUTTER_WIDTH * CHART_ANALOG_LANES))
 
 // the length of the track
 #define TRACK_LENGTH 12.0f
@@ -36,7 +37,7 @@
 // the alpha of a bt beam when its triggered
 #define TRACK_BT_BEAM_ALPHA 0.5
 
-// the alpha of an beam when its triggered
+// the alpha of an fx beam when its triggered
 #define TRACK_FX_BEAM_ALPHA 0.125
 
 //
@@ -51,24 +52,17 @@
 #define TRACK_CAMERA_OFFSET -1.0f
 
 //
-// BUFFER
-//
-
-// the number of beats in a single buffer chunk
-#define TRACK_BUFFER_CHUNK_BEATS 4
-
-// the number of extra buffer chunks that are loaded before and after the current buffer chunks
-#define TRACK_EXTRA_BUFFER_CHUNKS 2
-
-//
 // NOTES, ANALOGS, AND BARS
 //
+
+// todo: move these to note/analog mesh headers?
 
 // the height of a measure or beat bar on the track
 // todo: proper bar height? not sure if this is resized on speed change
 #define TRACK_BAR_HEIGHT 0.025f
 
 // the height of bt and fx chips
+// todo: move to note_mesh.h?
 #define TRACK_CHIP_HEIGHT 0.075f
 
 // the width of a bt note on the track
@@ -103,10 +97,6 @@ typedef struct
     GLuint uniform_lane_lane_id;
     Mesh *lane_mesh;
 
-    // the measure bars program and mesh
-    Program *measure_bars_program;
-    Mesh *measure_bars_mesh;
-
     // the beam program
     Program *beam_program;
     GLuint uniform_beam_judgement_id;
@@ -119,36 +109,28 @@ typedef struct
     BeamState bt_beam_states[CHART_BT_LANES];
     BeamState fx_beam_states[CHART_FX_LANES];
 
-    // the bt, fx, and analog meshes of this track
+    // the measure bar, bt, fx, and analog meshes of this track
+    MeasureBarMesh *measure_bar_mesh;
     NoteMesh *bt_mesh, *fx_mesh;
     AnalogMesh *analog_mesh;
-
-    // the last subbeat this track was drawn at
-    double subbeat;
-
-    // the index of the last tempo this track was drawn at
-    int tempo_index;
-
-    // the current speed this track is scrolling at
-    double speed;
-
-    // the current buffer chunk this track is scrolled to
-    int buffer_position;
 } Track;
 
 Track *track_create(Chart *chart);
 void track_free(Track *track);
 
-// get the position of a subbeat on the track at the given speed
-float track_subbeat_position(double subbeat, double speed);
+// get the size of a beat on the track at 1x speed
+// multiply by the current speed to get the proper draw size
+float track_beat_size();
 
-// set the given tracks scroll speed
-void track_set_speed(Track *track, double speed);
+// get the position of a subbeat on the track at the 1x speed
+// multiply by the current speed to get the proper draw position
+// e.g. track_subbeat_position(100) * 4.5 is subbeat 100 at 4.5x speed
+float track_subbeat_position(double subbeat);
 
 // trigger the bt/fx beam on the given lane with the given judgement
 void track_bt_beam(Track *track, int lane, Judgement judgement);
 void track_fx_beam(Track *track, int lane, Judgement judgement);
 
-// draw the given tracks state at the given tempo and subbeat
+// draw the given tracks state at the given tempo, subbeat, and speed
 // tempo_index should be in the given tracks charts tempos
-void track_draw(Track *track, int tempo_index, double subbeat);
+void track_draw(Track *track, int tempo_index, double subbeat, double speed);
