@@ -188,6 +188,7 @@ void analog_mesh_draw(AnalogMesh *mesh,
                       mat4_t projection,
                       mat4_t view,
                       mat4_t model,
+                      double position,
                       uint16_t start_subbeat,
                       uint16_t end_subbeat,
                       double speed)
@@ -195,8 +196,11 @@ void analog_mesh_draw(AnalogMesh *mesh,
     // additive blending for analogs
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-    // raise analogs slightly above the track
-    model = m4_mul(model, m4_translation(vec3(0, 0, -0.005)));
+    // offset speed
+    speed += ANALOG_MESH_SPEED_OFFSET;
+
+    // raise analogs slightly above the track and scroll
+    model = m4_mul(model, m4_translation(vec3(0, -position * speed, ANALOG_MESH_RAISE)));
 
     // draw the analogs
     program_use(mesh->program);

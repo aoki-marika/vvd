@@ -253,9 +253,11 @@ void track_draw(Track *track, int tempo_index, double subbeat, double speed)
 
     mesh_draw_end(track->lane_mesh);
 
-    // scroll the bars and notes
-    // subtract half of track_length so 0 scroll is at the start of the track, not 0,0,0
-    mat4_t scrolled_model = m4_mul(model, m4_translation(vec3(0, -(track_subbeat_position(subbeat) * speed) - (TRACK_LENGTH / 2), 0)));
+    // get the model for vertices starting at the beginning of the track
+    mat4_t offset_model = m4_mul(model, m4_translation(vec3(0, -TRACK_LENGTH / 2, 0)));
+
+    // get the model for vertices scrolling with the track
+    mat4_t scrolled_model = m4_mul(offset_model, m4_translation(vec3(0, -track_subbeat_position(subbeat) * speed, 0)));
 
     // get the start and end subbeat of the given subbeat for drawing
     int subbeats_per_track = ceil(TRACK_LENGTH / (track_beat_size() * speed)) * CHART_BEAT_SUBBEATS;
@@ -294,7 +296,7 @@ void track_draw(Track *track, int tempo_index, double subbeat, double speed)
     // draw all the notes and analogs in order
     note_mesh_draw_holds(track->fx_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //fx holds
     note_mesh_draw_holds(track->bt_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //bt holds
-    analog_mesh_draw(track->analog_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //analogs
     note_mesh_draw_chips(track->fx_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //fx chips
     note_mesh_draw_chips(track->bt_mesh, projection, view, scrolled_model, start_subbeat, end_subbeat, speed); //bt chip
+    analog_mesh_draw(track->analog_mesh, projection, view, offset_model, track_subbeat_position(subbeat), start_subbeat, end_subbeat, speed); //analogs
 }
