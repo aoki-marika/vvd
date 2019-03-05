@@ -7,6 +7,7 @@
 
 #include "chart_vox.h"
 #include "note_utils.h"
+#include "shared.h"
 
 void chart_parse_file(Chart *chart,
                       const char *path,
@@ -115,6 +116,63 @@ Chart *chart_create(const char *path)
 
     // parse the file
     chart_parse_file(chart, path, parsing_state_create, parsing_state_free, parse_line);
+
+    // get the charts main bpm
+    // done here instead of parsers as it would just be duplicated logic
+
+    // the bpms of this chart
+    double bpms[chart->num_tempos];
+
+    // the duration, in subbeats, of each bpm of this chart
+    int bpm_durations[chart->num_tempos];
+
+    // reset bpms and durations
+    for (int i = 0; i < chart->num_tempos; i++)
+    {
+        bpms[i] = INDEX_NONE;
+        bpm_durations[i] = 0;
+    }
+
+    // get all the bpms and durations
+    for (int i = 0; i < chart->num_tempos; i++)
+    {
+        Tempo *tempo = &chart->tempos[i];
+
+        // get the index of the current tempos bpm in bpms/bpm_durations
+        int index = 0;
+        for (int b = 0; b < chart->num_tempos; b++)
+        {
+            if (bpms[b] == tempo->bpm || bpms[b] == INDEX_NONE)
+            {
+                index = b;
+                break;
+            }
+        }
+
+        // set the bpm for index to the current tempos bpm
+        bpms[index] = tempo->bpm;
+
+        // append the duration of the current tempo
+        // use the end of the chart of the next tempo depending on if this is the last tempo
+        if (i + 1 < chart->num_tempos)
+            bpm_durations[index] += chart->tempos[i + 1].subbeat - tempo->subbeat;
+        else
+            bpm_durations[index] += chart->end_subbeat - tempo->subbeat;
+    }
+
+    // get the index of the longest bpm
+    int main_index = 0;
+    for (int i = 0; i < chart->num_tempos; i++)
+    {
+        if (bpms[i] == INDEX_NONE)
+            break;
+
+        if (bpm_durations[i] > bpm_durations[main_index])
+            main_index = i;
+    }
+
+    // set the charts main bpm
+    chart->main_bpm = bpms[main_index];
 
     // return the loaded chart
     return chart;

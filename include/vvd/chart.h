@@ -127,6 +127,10 @@ typedef struct
     int num_analogs[CHART_ANALOG_LANES];
     Analog *analogs[CHART_ANALOG_LANES];
 
+    // the most consistent bpm of this chart
+    // found by getting the bpm in this chart that is active for the longest duration
+    double main_bpm;
+
     // the subbeat this chart ends at
     uint16_t end_subbeat;
 
