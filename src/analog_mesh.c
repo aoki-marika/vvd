@@ -12,7 +12,8 @@ float analog_point_draw_position(AnalogPoint *point)
 void create_segment_vertices(Mesh *mesh,
                              int *vertices_index,
                              AnalogPoint *start_point,
-                             AnalogPoint *end_point)
+                             AnalogPoint *end_point,
+                             float slam_height)
 {
     // get the segments start position
     vec3_t start_position = vec3(analog_point_draw_position(start_point),
@@ -21,7 +22,7 @@ void create_segment_vertices(Mesh *mesh,
 
     // offset the start of the segment if the last segment was a slam, so the vertices arent overlaying eachother
     if (start_point->slam)
-        start_position.y += track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS);
+        start_position.y += slam_height;
 
     // get the segments end position
     vec3_t end_position = vec3(analog_point_draw_position(end_point),
@@ -43,7 +44,8 @@ void create_slam_vertices(Mesh *mesh,
                           int *vertices_index,
                           AnalogPoint *start_point,
                           AnalogPoint *end_point,
-                          bool last_segment)
+                          bool last_segment,
+                          float height)
 {
     // get the slams position
     vec3_t position = vec3(0,
@@ -64,7 +66,7 @@ void create_slam_vertices(Mesh *mesh,
     mesh_set_vertices_quad(mesh,
                            *vertices_index,
                            width,
-                           track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS),
+                           height,
                            position);
 
     // increment vertices_index
@@ -75,14 +77,14 @@ void create_slam_vertices(Mesh *mesh,
     {
         // get the tails position
         vec3_t tail_position = vec3(analog_point_draw_position(end_point),
-                                    position.y + track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS),
+                                    position.y + height,
                                     0);
 
         // create the tail vertices
         mesh_set_vertices_quad(mesh,
                                *vertices_index,
                                ANALOG_MESH_SEGMENT_WIDTH,
-                               track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS),
+                               height,
                                tail_position);
 
         // increment vertices_index
@@ -97,6 +99,18 @@ void load_analogs(AnalogMesh *mesh)
 
     for (int l = 0; l < CHART_ANALOG_LANES; l++)
     {
+        // the index of the tempo of the last segment that was created
+        int tempo_index = 0;
+
+        // the current height scale for slams
+        float slam_height_scale = 1.0f;
+
+        // whether or not a slam was created on this lane
+        // this to replicate functionality where slam height scale remains unchanged until the first slam
+        // for cases like distorted floor inf, where it starts slow but has no slams until the speedup (to the main bpm of the chart)
+        // and then the slams in the speedup are at 1x scale
+        bool slam_occurred = false;
+
         for (int a = 0; a < mesh->chart->num_analogs[l]; a++)
         {
             Analog *analog = &mesh->chart->analogs[l][a];
@@ -106,18 +120,46 @@ void load_analogs(AnalogMesh *mesh)
                 AnalogPoint *start_point = &analog->points[p];
                 AnalogPoint *end_point = &analog->points[p + 1];
 
+                    // update the current tempo
+                    while (tempo_index + 1 < mesh->chart->num_tempos &&
+                           start_point->subbeat >= mesh->chart->tempos[tempo_index + 1].subbeat)
+                    {
+                        // only increment slam scale if a slam has already been created
+                        if (slam_occurred)
+                        {
+                            // get the current and next bpms
+                            double current_bpm = mesh->chart->tempos[tempo_index].bpm;
+                            double next_bpm = mesh->chart->tempos[tempo_index + 1].bpm;
+
+                            // increment slam height scale with the difference for slam scaling betwen the current and next bpms
+                            slam_height_scale += (next_bpm - current_bpm) / 128.0;
+                        }
+
+                        // increment tempo index
+                        tempo_index++;
+                    }
+
+                // get the current height for slams
+                float slam_height = track_subbeat_position(ANALOG_MESH_SLAM_SUBBEATS);;
+                slam_height *= (slam_height_scale < ANALOG_MESH_SLAM_MIN_HEIGHT_SCALE) ? ANALOG_MESH_SLAM_MIN_HEIGHT_SCALE : slam_height_scale;
+
                 // create the vertices for the current segment
                 if (end_point->slam)
+                {
+                    slam_occurred = true;
                     create_slam_vertices(mesh->mesh,
                                          &vertices_index,
                                          start_point,
                                          end_point,
-                                         p == analog->num_points - 2);
+                                         p == analog->num_points - 2,
+                                         slam_height);
+                }
                 else
                     create_segment_vertices(mesh->mesh,
                                             &vertices_index,
                                             start_point,
-                                            end_point);
+                                            end_point,
+                                            slam_height);
             }
         }
     }

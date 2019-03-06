@@ -18,10 +18,11 @@
 // the speed that is added to the given speed for the final speed of an analog meshes scrolling
 #define ANALOG_MESH_SPEED_OFFSET 0.01f
 
-// the height in subbeats of an analog slam
-// todo: not sure what unit slams are sized in but its likely not subbeats
-// pupa mxm is a good reference for how slam sizing works
+// the height in subbeats of an analog slam at 1x height scale
 #define ANALOG_MESH_SLAM_SUBBEATS 8
+
+// the minimum height scale for slams in an analog mesh
+#define ANALOG_MESH_SLAM_MIN_HEIGHT_SCALE 0.5
 
 typedef struct
 {
