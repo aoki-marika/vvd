@@ -59,6 +59,7 @@ void update_current_notes(int num_lanes,
                           int num_notes[num_lanes],
                           Note *notes[num_lanes],
                           int current_notes[num_lanes],
+                          bool *chips_judged[num_lanes],
                           double time)
 {
     for (int l = 0; l < num_lanes; l++)
@@ -78,7 +79,8 @@ void update_current_notes(int num_lanes,
                            (time <= note->end_time);
             else
                 in_range = (time >= note->start_time - JUDGEMENT_ERROR_WINDOW) &&
-                           (time <= note->start_time + JUDGEMENT_ERROR_WINDOW);
+                           (time <= note->start_time + JUDGEMENT_ERROR_WINDOW) &&
+                           !chips_judged[l][n];
 
             // set the current lanes current note if the current note is in range
             if (in_range)
@@ -212,6 +214,7 @@ void update_current(Playback *playback, double time)
                          playback->chart->num_bt_notes,
                          playback->chart->bt_notes,
                          playback->current_bt_notes,
+                         playback->scoring->bt_chips_judged,
                          time);
 
     // update the current fx notes
@@ -219,6 +222,7 @@ void update_current(Playback *playback, double time)
                          playback->chart->num_fx_notes,
                          playback->chart->fx_notes,
                          playback->current_fx_notes,
+                         playback->scoring->fx_chips_judged,
                          time);
 
     // update the current analogs
