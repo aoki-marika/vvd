@@ -16,7 +16,7 @@
 #define ANALOG_MESH_RAISE -0.005f
 
 // the speed that is added to the given speed for the final speed of an analog meshes scrolling
-#define ANALOG_MESH_SPEED_OFFSET 0.01f
+#define ANALOG_MESH_SPEED_OFFSET 0.05f
 
 // the height in subbeats of an analog slam at 1x height scale
 #define ANALOG_MESH_SLAM_SUBBEATS 8
